@@ -8,37 +8,35 @@
 - 階段0-3已有實際產出：200句測試集、兩個真跑過的 baseline（辭典最長詞匹配 / Taigi-Llama-2-Translator-7B）、
   量化比較報告（[`reports/stage2_baseline_comparison.md`](./reports/stage2_baseline_comparison.md)）、
   安全檢查層腳本與結果（[`reports/stage3_safety_checks.md`](./reports/stage3_safety_checks.md)）
-- 母語者驗證平台（`webapp/`）已完成，見下方
+- 母語者驗證平台已上線，見下方
 
 ## 母語者驗證平台
 
-Flask 網頁工具，讓台語母語者逐句驗證機器翻譯候選答案（文字＋語音），每輪隨機抽10句，
-標記正確/需修改/錯誤並可直接編輯，結果存檔後可匯總成訓練/評估語料。
+**測試連結：https://heisenberg7299.github.io/taigi-mt-project/**
+**開發者進度頁：https://heisenberg7299.github.io/taigi-mt-project/progress.html**
+（用Firebase email/password登入才看得到）
 
-**測試連結**：透過 Cloudflare Tunnel 打通到開發者本機。這是免費的臨時通道
-（quick tunnel），沒有固定網址，重啟或斷線重連都會換一組新網址，**不要把
-連結寫死在任何地方**（包括這份README）——請跟開發者要目前最新的連結，
-或是開發者自己在本機執行 `cat CURRENT_TUNNEL_URL.txt` 查看目前有效的網址。
+靜態網站（`docs/`），GitHub Pages + Firebase Firestore，**不依賴任何一台特定電腦
+開機或連網**——這是2026-08-01從本機Flask+Cloudflare Tunnel版本遷移過來的，
+舊版本機服務已經關閉。沿用 `english-vocab-app` 專案的同一個Firebase，資料存在
+獨立的 `taigi_reviews` / `taigi_tokens` collection，不會跟其他app的資料混。
 
-本機執行`scripts/tunnel_watchdog.sh`會自動監控tunnel狀態，斷線（例如網路
-不穩、Mac睡眠喚醒後連線沒回來）會自動重啟並把新網址寫進
-`CURRENT_TUNNEL_URL.txt`，不用手動發現斷線才處理：
+讓台語母語者逐句驗證機器翻譯候選答案（文字＋語音），每輪隨機抽10句，標記
+正確/需修改/錯誤並可直接編輯，結果即時存進Firestore。測試者輸入名字後可以
+直接開始；同一個名字（含換裝置）會接回同一份進度。
+
+本機開發/預覽：
 ```bash
-nohup bash scripts/tunnel_watchdog.sh > cloudflared_watchdog.log 2>&1 &
+cd docs && python3 -m http.server 8000
+# 瀏覽器開 http://127.0.0.1:8000
 ```
-如果需要長期穩定、不會變動的網址（不依賴這台Mac一直開著），要另外申請
-Cloudflare帳號設定named tunnel，是更大的投入，先不做。
+改完 `docs/` 底下的檔案，`git push` 到 main 分支，GitHub Pages 會自動重新部署。
+Firestore 安全規則定義在 `english-vocab-app` repo 的 `firestore.rules`（同一個
+Firebase專案），改規則要在那邊 `firebase deploy --only firestore:rules`。
 
-測試者輸入名字後，系統會給一組專屬的 `?t=<token>` 網址，請加入書籤才能之後接續填寫，
-不要用別人的名字或連結（每個人的連結不可互通、不可猜測）。
-
-本機執行：
-```bash
-cd webapp
-source ../venv/bin/activate   # 需先跑過下面「環境設置」
-python3 app.py
-# 瀏覽器開 http://127.0.0.1:5001
-```
+`webapp/`（舊版Flask）保留在repo裡供參考，已停用，不建議再啟動——目前所有
+真實測試資料都在Firestore，本機 `data/human_review/` 底下的舊資料是遷移前的
+歷史存檔（遷移腳本：`scripts/migrate_to_firestore.py`）。
 
 ## 環境設置
 
