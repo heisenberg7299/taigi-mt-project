@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>台語翻譯候選答案 - 母語者驗證</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<section id="name-section" class="hidden">
+  <h1>台語翻譯候選答案 - 母語者驗證</h1>
+  <div class="card">
+    <p>這裡有 200 句「中文 -> 台語」機器翻譯候選句，需要你幫忙判斷：</p>
+    <ul>
+      <li>翻譯得對不對、自然不自然</li>
+      <li>如果不對，正確的台語應該怎麼說</li>
+    </ul>
+    <p class="muted">每次隨機抽 10 句一輪，每句大概花 10-20 秒，一輪約 2-3 分鐘。做完一輪可以休息，要繼續再測下一輪，系統會記得你做過哪些。</p>
+    <form id="name-form">
+      <div class="field">
+        <label class="field-label" for="tester">你的名字或代號</label>
+        <input type="text" id="tester" name="tester" placeholder="例如：阿明" required autofocus>
+        <p class="muted" style="margin-top:6px;">之後想接續進度，用同一個名字就可以，換裝置也一樣。</p>
+      </div>
+      <button type="submit">開始驗證</button>
+    </form>
+  </div>
+</section>
+
+<section id="loading-section">
+  <p class="muted">載入中...</p>
+</section>
+
+<section id="review-section" class="hidden">
+  <div class="progress-bar"><div id="batch-progress-bar" style="width:0%"></div></div>
+  <p class="muted" id="progress-line"></p>
+  <p class="muted">💡 這台裝置會自動記得你的進度，關掉視窗再回來也沒關係。換別的裝置的話，到首頁重新輸入「一樣的名字」就能接回同一份進度。</p>
+
+  <div class="card">
+    <span class="badge" id="category-badge"></span>
+    <div id="checks-badges"></div>
+    <p class="muted" style="margin-top:12px;">中文原句</p>
+    <div class="zh" id="zh-text"></div>
+    <p class="muted">台語候選翻譯（AI模型產生，請幫忙檢查）</p>
+    <div class="candidate" id="candidate-text"></div>
+    <audio controls id="audio-player"></audio>
+  </div>
+
+  <form id="review-form" class="card">
+    <div class="field">
+      <label class="field-label">這句翻譯得怎麼樣？</label>
+      <div class="radio-group">
+        <label><input type="radio" name="verdict" value="correct" required> ✅ 正確、自然，可以直接用</label><br>
+        <label><input type="radio" name="verdict" value="needs_edit"> ✏️ 意思大致對，但需要修改</label><br>
+        <label><input type="radio" name="verdict" value="wrong"> ❌ 錯誤或語意不對</label>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="corrected">正確／修改後的台語（漢字）— 如果上面選「正確」可以不改，選「需要修改」或「錯誤」請填正確版本</label>
+      <textarea id="corrected" name="corrected" rows="2"></textarea>
+    </div>
+    <div class="field">
+      <label class="field-label">流暢度（1=完全不自然，5=非常自然）</label>
+      <div class="rating radio-group" id="fluency-group"></div>
+    </div>
+    <div class="field">
+      <label class="field-label">保真度／意思有沒有保留完整（1=完全走樣，5=意思完全對）</label>
+      <div class="rating radio-group" id="adequacy-group"></div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="note">備註（選填，例如：這個詞我們這邊講法不一樣）</label>
+      <textarea id="note" name="note" rows="2"></textarea>
+    </div>
+    <button type="submit">送出，下一句 →</button>
+  </form>
+</section>
+
+<section id="batch-done-section" class="hidden">
+  <div class="card">
+    <h1>✅ 這一輪10題完成了！</h1>
+    <p><span id="batch-done-name"></span>，辛苦了。你目前總共完成 <span id="batch-done-count"></span> / <span id="batch-done-total"></span> 句。</p>
+    <div id="batch-done-remaining">
+      <p class="muted">還剩下一些句子沒測過。可以先休息，之後再回來繼續；或是現在再測一輪（會隨機抽新的10題，不會重複剛剛做過的）。</p>
+      <button id="new-batch-btn">再測10題 →</button>
+    </div>
+    <p id="batch-done-finished" class="hidden">所有句子都測過了，太感謝了！🎉</p>
+  </div>
+</section>
+
+<script type="module">
+import {
+  getOrCreateToken, getLocalSession, loadData,
+  loadAnsweredIds, getOrInitBatch, startNewBatch, submitReview, findItem,
+} from "./app.js";
+
+const nameSection = document.getElementById("name-section");
+const loadingSection = document.getElementById("loading-section");
+const reviewSection = document.getElementById("review-section");
+const batchDoneSection = document.getElementById("batch-done-section");
+
+let state = { token: null, name: null, data: null, batch: [], answered: new Set() };
+
+function showOnly(section) {
+  for (const s of [nameSection, loadingSection, reviewSection, batchDoneSection]) {
+    s.classList.toggle("hidden", s !== section);
+  }
+}
+
+async function init() {
+  showOnly(loadingSection);
+  state.data = await loadData();
+
+  const session = getLocalSession();
+  if (session) {
+    state.token = session.token;
+    state.name = session.name;
+    await enterReviewFlow();
+  } else {
+    showOnly(nameSection);
+  }
+}
+
+document.getElementById("name-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("tester").value.trim();
+  if (!name) return;
+  showOnly(loadingSection);
+  state.token = await getOrCreateToken(name);
+  state.name = name;
+  await enterReviewFlow();
+});
+
+async function enterReviewFlow() {
+  showOnly(loadingSection);
+  state.answered = await loadAnsweredIds(state.token);
+  state.batch = await getOrInitBatch(state.token);
+  renderNext();
+}
+
+function renderNext() {
+  if (state.batch.length === 0) {
+    renderBatchDone();
+    return;
+  }
+  const unansweredInBatch = state.batch.filter((id) => !state.answered.has(id));
+  if (unansweredInBatch.length === 0) {
+    renderBatchDone();
+    return;
+  }
+  const itemId = unansweredInBatch[0];
+  const item = findItem(state.data, itemId);
+  renderReview(item);
+}
+
+function renderReview(item) {
+  showOnly(reviewSection);
+  const total = state.data.length;
+  const done = state.answered.size;
+  const pos = state.batch.indexOf(item.id) + 1;
+  document.getElementById("batch-progress-bar").style.width = `${(pos / state.batch.length) * 100}%`;
+  document.getElementById("progress-line").textContent =
+    `這一輪第 ${pos} / ${state.batch.length} 題 · 你總共已完成 ${done} / ${total} 句（測試者：${state.name}）`;
+
+  document.getElementById("category-badge").textContent = item.categoryLabel;
+  const checksDiv = document.getElementById("checks-badges");
+  checksDiv.innerHTML = "";
+  for (const c of item.failedChecks || []) {
+    const span = document.createElement("span");
+    span.className = "badge badge-warn";
+    span.title = c.reason || "";
+    span.textContent = `⚠ ${c.label}`;
+    checksDiv.appendChild(span);
+  }
+  document.getElementById("zh-text").textContent = item.zh;
+  document.getElementById("candidate-text").textContent = item.candidate || "（無輸出）";
+  document.getElementById("audio-player").src = item.audio;
+
+  const form = document.getElementById("review-form");
+  form.reset();
+  document.getElementById("corrected").value = item.candidate || "";
+
+  const fg = document.getElementById("fluency-group");
+  const ag = document.getElementById("adequacy-group");
+  fg.innerHTML = "";
+  ag.innerHTML = "";
+  for (let i = 1; i <= 5; i++) {
+    fg.insertAdjacentHTML("beforeend", `<label><input type="radio" name="fluency" value="${i}"> ${i}</label>`);
+    ag.insertAdjacentHTML("beforeend", `<label><input type="radio" name="adequacy" value="${i}"> ${i}</label>`);
+  }
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const payload = {
+      id: item.id,
+      name: state.name,
+      zh: item.zh,
+      category: item.category,
+      candidate: item.candidate,
+      verdict: fd.get("verdict"),
+      correctedNanHan: (fd.get("corrected") || "").trim() || null,
+      fluency: fd.get("fluency") ? parseInt(fd.get("fluency")) : null,
+      adequacy: fd.get("adequacy") ? parseInt(fd.get("adequacy")) : null,
+      note: (fd.get("note") || "").trim() || null,
+    };
+    await submitReview(state.token, item.id, payload);
+    state.answered.add(item.id);
+    renderNext();
+  };
+}
+
+async function renderBatchDone() {
+  showOnly(batchDoneSection);
+  const total = state.data.length;
+  const done = state.answered.size;
+  document.getElementById("batch-done-name").textContent = state.name;
+  document.getElementById("batch-done-count").textContent = done;
+  document.getElementById("batch-done-total").textContent = total;
+  const remaining = total - done;
+  document.getElementById("batch-done-remaining").classList.toggle("hidden", remaining === 0);
+  document.getElementById("batch-done-finished").classList.toggle("hidden", remaining !== 0);
+}
+
+document.getElementById("new-batch-btn").addEventListener("click", async () => {
+  showOnly(loadingSection);
+  state.batch = await startNewBatch(state.token);
+  renderNext();
+});
+
+init();
+</script>
+</body>
+</html>

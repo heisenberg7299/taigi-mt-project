@@ -1,0 +1,42 @@
+:root { color-scheme: light dark; }
+body {
+  font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+  line-height: 1.6;
+  background: #fafafa;
+  color: #1a1a1a;
+}
+@media (prefers-color-scheme: dark) {
+  body { background: #14161a; color: #e8e8e8; }
+  .card { background: #1e2126 !important; border-color: #33373f !important; }
+  textarea, input[type=text], input[type=email], input[type=password] { background: #14161a; color: #e8e8e8; border-color: #33373f; }
+  .muted { color: #999 !important; }
+  .candidate { background: #14243a !important; }
+  a { color: #7fb2ff; }
+}
+h1 { font-size: 1.3rem; }
+.card { background: #fff; border: 1px solid #e2e2e2; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.muted { color: #777; font-size: 0.9rem; }
+.badge { display: inline-block; font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; background: #eee; margin-right: 6px; }
+.badge-warn { background: #fff3cd; color: #7a5c00; }
+.zh { font-size: 1.3rem; margin: 12px 0; }
+.candidate { font-size: 1.5rem; font-weight: 600; margin: 12px 0; padding: 12px; background: #f0f6ff; border-radius: 8px; }
+textarea, input[type=text], input[type=email], input[type=password] {
+  width: 100%; box-sizing: border-box; font-size: 1.1rem; padding: 10px;
+  border-radius: 8px; border: 1px solid #ccc; font-family: inherit;
+}
+.radio-group label { display: inline-flex; align-items: center; gap: 4px; margin-right: 16px; font-size: 1.05rem; cursor: pointer; }
+.rating label { margin-right: 12px; }
+button, .btn { font-size: 1.05rem; padding: 10px 20px; border-radius: 8px; border: none; background: #2563eb; color: white; cursor: pointer; }
+button:hover, .btn:hover { background: #1d4ed8; }
+.progress-bar { height: 8px; background: #e2e2e2; border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
+.progress-bar > div { height: 100%; background: #2563eb; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e2e2e2; }
+audio { width: 100%; margin: 8px 0; }
+.field { margin-bottom: 16px; }
+.field label.field-label { display: block; font-weight: 600; margin-bottom: 6px; }
+footer { text-align: center; margin-top: 24px; }
+.hidden { display: none !important; }

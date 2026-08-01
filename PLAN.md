@@ -111,11 +111,15 @@ taigi-mt-project/
 
 ## 母語者驗證平台
 
-**2026-08-01起改用靜態版，正式上線網址：https://heisenberg7299.github.io/taigi-verify/**
-（獨立repo `taigi-verify`，GitHub Pages + Firebase Firestore，不依賴這台Mac開機/網路，
+**2026-08-01起改用靜態版，正式上線網址：https://heisenberg7299.github.io/taigi-mt-project/**
+（本repo的 `docs/` 資料夾，GitHub Pages + Firebase Firestore，不依賴這台Mac開機/網路，
 沿用`english-vocab-app`的同一個Firebase專案，資料存在獨立的`taigi_reviews`/`taigi_tokens`
 collection，不會跟單字app的資料混）。開發者進度頁：
-https://heisenberg7299.github.io/taigi-verify/progress.html （用email/password登入）。
+https://heisenberg7299.github.io/taigi-mt-project/progress.html （用email/password登入）。
+
+一開始建了獨立的`taigi-verify` repo，後來決定併回本repo，不要多開一個——
+所有靜態網站檔案都在 `docs/`，Firestore資料完全不受影響（資料存在雲端，跟哪個
+git repo發布網站無關），不用重新遷移。
 
 舊版 `webapp/app.py`（Flask，本機+cloudflared tunnel）累積的62筆真實回覆（5位測試者：
 鐘/Angel/Yiching/正男/yuki）已用 `scripts/migrate_to_firestore.py` 全部遷移進新系統
