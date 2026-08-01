@@ -111,6 +111,36 @@ Decision:
 5. **G2P最後才評估** — 只有在「最佳候選模型必須吃Tâi-lô輸入」且「音質明顯勝出現有
    neurlang VITS」兩個條件都成立時，才值得投入建置台語漢字→Tâi-lô的G2P層
 
+## 統一 Benchmark Runner（已建好，2026-08-01）
+
+`scripts/tts_benchmark/`：可重複使用的跑分框架，落實上面「淘汰漏斗」流程，
+之後新增候選模型只要寫一個 adapter，不用重寫測試邏輯。
+
+- `benchmark_set.py` — 固定測試集（12句：台語漢字/Tâi-lô/繁體華語/英文/
+  中英台混合/數字病房號醫療詞彙/否定與較長句，每類2句）
+- `metrics.py` — 統一算法：`audio_duration_sec` / `silence_ratio`（靜音門檻
+  0.01振幅） / `effective_speech_sec` / `rtf`；`silence_ratio > 0.75` 自動判
+  `fail_silence`（門檻依據：正常語音案例約46-57%靜音，speecht5漢字失敗案例
+  93-94%，兩者間留安全邊界）
+- `adapters/base.py` — 共同介面（`name` / `input_format` / `required_frontend`
+  / `load()` / `synthesize()`），跑分時只挑跟adapter.input_format相容的測試句
+- `adapters/neurlang_vits.py`、`adapters/speecht5_tailo.py` — 已實作並跑過
+- 執行：`python scripts/run_tts_benchmark.py`，輸出 `tests/tts_benchmark_results.jsonl`
+  和 `.csv`，音檔存 `tests/tts_benchmark_audio/{model}/`（不進版控，可重新產生）
+- `omission_rate`、`intelligibility_score` 兩欄留null，等母語者人工補（其餘欄位全自動）
+
+### 第一次跑分結果
+
+| model | 測了幾句 | 平均silence_ratio | 平均rtf | decision |
+|---|---|---|---|---|
+| neurlang-vits-suisiann | 6（han+num+neg類，全相容） | 53% | **0.10**（CPU上比即時快約10倍） | 全部 pending_human_review |
+| speecht5_tailo_Hokkien_ver1.0.d | 2（僅tailo類，格式相容的只有這些） | 53% | 0.20-0.68（明顯慢很多，其中一句慢到接近0.7） | 全部 pending_human_review |
+
+兩個模型在各自相容的輸入格式下都正常產生語音（沒有觸發`fail_silence`），這跟稍早
+單獨測試的結論一致。新發現：speecht5的RTF比neurlang慢3-7倍——雖然還沒到不能用
+的程度，但這也是選型時的額外扣分項，一併記錄起來，之後每個新候選都會有這個欄位
+可以直接比較。
+
 ## 系統設計原則（這次的實測讓這件事變得明確）
 
 > **TTS模型的輸入文字體系必須和上游翻譯輸出一致；否則模型音質再好，也會多出一個

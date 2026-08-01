@@ -7,6 +7,7 @@ __pycache__/
 models/
 data/raw/
 tests/audio/
+tests/tts_benchmark_audio/
 
 # 測試者的即時回覆資料（個人意見、持續累積），不進版控
 data/human_review/

@@ -1,0 +1,9 @@
+model,input_format,required_frontend,id,category,text,generation_success,error,audio_duration_sec,silence_ratio,effective_speech_sec,rtf,omission_rate,intelligibility_score,decision,audio_path
+neurlang-vits-suisiann,han,none,han_01,台語漢字,我需要啉水。,True,,1.777,0.5327,0.83,0.122,,,pending_human_review,tests/tts_benchmark_audio/neurlang-vits-suisiann/han_01.wav
+neurlang-vits-suisiann,han,none,han_02,台語漢字,請共我叫護理師。,True,,2.497,0.5229,1.191,0.103,,,pending_human_review,tests/tts_benchmark_audio/neurlang-vits-suisiann/han_02.wav
+neurlang-vits-suisiann,han,none,num_01,數字病房號醫療詞彙,請共我叫三號病房的護理師。,True,,3.565,0.532,1.668,0.106,,,pending_human_review,tests/tts_benchmark_audio/neurlang-vits-suisiann/num_01.wav
+neurlang-vits-suisiann,han,none,num_02,數字病房號醫療詞彙,我這馬血壓一二零，體溫三十六度五。,True,,4.482,0.5455,2.037,0.098,,,pending_human_review,tests/tts_benchmark_audio/neurlang-vits-suisiann/num_02.wav
+neurlang-vits-suisiann,han,none,neg_01,否定與較長句,我無胸疼，煩勞你共我確認一下這禮拜愛食的藥仔有偌濟種。,True,,6.282,0.4904,3.201,0.103,,,pending_human_review,tests/tts_benchmark_audio/neurlang-vits-suisiann/neg_01.wav
+neurlang-vits-suisiann,han,none,neg_02,否定與較長句,我猶未做檢查，毋過我這幾工攏無食藥仔，會使先毋通叫醫生無？,True,,9.022,0.5703,3.877,0.104,,,pending_human_review,tests/tts_benchmark_audio/neurlang-vits-suisiann/neg_02.wav
+speecht5_tailo_Hokkien_ver1.0.d,tailo,hanji_to_tailo_g2p,tailo_01,Tâi-lô,Gua2 su1-iau3 lim1 tsui2.,True,,3.296,0.5114,1.611,0.682,,,pending_human_review,tests/tts_benchmark_audio/speecht5_tailo_Hokkien_ver1.0.d/tailo_01.wav
+speecht5_tailo_Hokkien_ver1.0.d,tailo,hanji_to_tailo_g2p,tailo_02,Tâi-lô,Chhiann2 ka7 gua2 kio3 ho7-li2-su1.,True,,4.096,0.541,1.88,0.197,,,pending_human_review,tests/tts_benchmark_audio/speecht5_tailo_Hokkien_ver1.0.d/tailo_02.wav
