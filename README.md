@@ -15,10 +15,19 @@
 Flask 網頁工具，讓台語母語者逐句驗證機器翻譯候選答案（文字＋語音），每輪隨機抽10句，
 標記正確/需修改/錯誤並可直接編輯，結果存檔後可匯總成訓練/評估語料。
 
-**目前測試連結（透過 Cloudflare Tunnel 打通到開發者本機，只要那台機器開著就有效，
-重啟過會換新網址，失效請找開發者要新連結）：**
+**測試連結**：透過 Cloudflare Tunnel 打通到開發者本機。這是免費的臨時通道
+（quick tunnel），沒有固定網址，重啟或斷線重連都會換一組新網址，**不要把
+連結寫死在任何地方**（包括這份README）——請跟開發者要目前最新的連結，
+或是開發者自己在本機執行 `cat CURRENT_TUNNEL_URL.txt` 查看目前有效的網址。
 
-https://ate-state-engineering-bend.trycloudflare.com
+本機執行`scripts/tunnel_watchdog.sh`會自動監控tunnel狀態，斷線（例如網路
+不穩、Mac睡眠喚醒後連線沒回來）會自動重啟並把新網址寫進
+`CURRENT_TUNNEL_URL.txt`，不用手動發現斷線才處理：
+```bash
+nohup bash scripts/tunnel_watchdog.sh > cloudflared_watchdog.log 2>&1 &
+```
+如果需要長期穩定、不會變動的網址（不依賴這台Mac一直開著），要另外申請
+Cloudflare帳號設定named tunnel，是更大的投入，先不做。
 
 測試者輸入名字後，系統會給一組專屬的 `?t=<token>` 網址，請加入書籤才能之後接續填寫，
 不要用別人的名字或連結（每個人的連結不可互通、不可猜測）。
