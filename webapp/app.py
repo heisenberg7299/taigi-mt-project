@@ -63,6 +63,7 @@ CHECK_LABELS = {
     "number_consistency": "數字唸法可能不一致",
     "medical_terms": "醫療術語可能遺漏",
     "length_anomaly": "長度比例異常",
+    "trap_words": "語意反轉風險字",
 }
 
 

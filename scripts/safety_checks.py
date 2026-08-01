@@ -95,11 +95,43 @@ def check_length_anomaly(zh: str, nan: str, min_ratio=0.5, max_ratio=2.0):
     return True, None
 
 
+# ---------- 5. 陷阱字（語意反轉）檢查 ----------
+# 目前只收錄實測驗證過、有把握的一組（見 PLAN.md「今天的實測教訓」第5點）。
+# 這份清單刻意只放有把握的條目，不要為了「看起來完整」就自己加未經確認的字對——
+# 亂加反而會製造假警報，比沒有檢查還糟。之後應該靠驗證平台測試者的備註持續補充。
+
+TRAP_WORDS = [
+    {
+        "zh_re": re.compile(r"慢慢走|走路|怎麼走|走\d+步|走了\d+步|走走"),
+        "wrong_char": "走",
+        "correct_char": "行",
+        "explanation": (
+            "中文「走」在這類語境是「行走」，台語對應詞是「行(kiânn)」；"
+            "台語「走(tsáu)」意思是「跑」，字面照搬會造成語意反轉"
+            "（例如「請慢慢走」變成「請慢慢跑」）"
+        ),
+    },
+]
+
+
+def check_trap_words(zh: str, nan: str):
+    if nan is None:
+        return False, "無翻譯結果"
+    problems = []
+    for trap in TRAP_WORDS:
+        if trap["zh_re"].search(zh) and trap["wrong_char"] in nan and trap["correct_char"] not in nan:
+            problems.append(f"「{trap['wrong_char']}」語意反轉風險：{trap['explanation']}")
+    if problems:
+        return False, "；".join(problems)
+    return True, None
+
+
 ALL_CHECKS = [
     ("negation", check_negation),
     ("number_consistency", check_number_consistency),
     ("medical_terms", check_medical_terms),
     ("length_anomaly", check_length_anomaly),
+    ("trap_words", check_trap_words),
 ]
 
 
