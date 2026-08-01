@@ -86,7 +86,7 @@
 - [x] **階段1：資源盤點與下載腳本** — `scripts/download_datasets.py`，每筆資料另存來源/日期/授權/可否商用/可否再散布
 - [x] **階段2（進行中）：三個 baseline 比較** — 200句測試集已建（`tests/test_set_200.jsonl`）。(1) 辭典最長詞匹配 已跑完，確認不可用 (2) Taigi-Llama-2-Translator 已跑完，品質足夠當研究參考但授權排除商用 (3) 現有規則/翻譯流程 待量化重跑。結果見 `reports/stage2_baseline_comparison.md`
 - [x] **階段3（第一版）：可控式翻譯 pipeline** — `scripts/safety_checks.py` 四層檢查（否定詞/數字一致性/醫療術語白名單/長度異常）已實作並套用在 Baseline 2 輸出上。結果見 `reports/stage3_safety_checks.md`：negation 1.0%、number_consistency 1.5%、medical_terms 9.5%（含假警報）、length_anomaly 1.5% 被攔下。medical_terms 白名單比對誤報率偏高，需要迭代；number_consistency 抓到真實的病房號唸法不一致問題
-- [ ] **階段4：TTS 模型比較** — 用同一份100句測試集比較 neurlang VITS / BreezyVoice-Taigi / 其他，至少兩位台語使用者評分（不能只靠自己聽，會逐漸習慣錯誤發音）
+- [ ] **階段4（候選盤點完成，尚未實測比較）：TTS 模型比較** — 調研結果見 `reports/stage4_tts_candidates.md`。**BreezyVoice-Taigi 查無公開權重，無法實測**（但論文自報台語發音準確率只有59.2%，顯示台語TTS本身難度高，非資源問題）；找到兩個新候選待測：`speecht5_tailo-hokkien`（MIT授權，優先測）、`MERaLiON-OmniVoice-Hokkien-TTS`（新加坡腔非台灣腔，當對照組）。用同一份100句測試集比較，至少兩位台語使用者評分（不能只靠自己聽，會逐漸習慣錯誤發音）
 - [ ] **階段5：自建領域資料** — 1,000~3,000組醫療/服務情境句對，每個意圖多種問法，母語者校正
 - [ ] **階段6：決定是否訓練專用模型** — 視階段2-3結果，三選一：(A) baseline+檢查層已夠用 (B) LoRA領域微調 (C) 堅持不用LLM則微調 mBART/NLLB/自建小型Transformer
 
