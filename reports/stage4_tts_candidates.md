@@ -241,6 +241,36 @@ taibun剛好支援輸出TLPA格式（`Converter(system="TLPA")`），輸出跟�
 下一個该做的事情是換掉speaker embedding（找真正的台語語者xvector或重新訓練），
 而不是繼續在taibun的參數上打轉；但目前沒有急迫理由投入，維持擱置。
 
+### 完整證據鏈與問題分層
+
+```text
+漢字直接輸入近乎靜音
+→ 加入 taibun 後可正常出聲
+→ 更換 Tâi-lô／TLPA 數字調格式仍無明顯改善
+→ 排除輸入格式是主要品質瓶頸
+→ 問題收斂到 checkpoint 容量與 speaker embedding
+```
+
+這代表要把「這個候選能不能用」拆成兩個獨立的問題看：
+
+- **可發聲性問題**（Speakability）：Hanji→羅馬字 frontend 已經解決，taibun
+  證明有效，這一層可以視為已解決
+- **語音品質問題**（Quality）：仍受 0.1B checkpoint 能力本身、以及非台語
+  語者 speaker embedding 限制，這一層還沒解決，而且已知不是靠調G2P能解的
+
+`Conditional fallback` 是正確的分類，不是`rejected`——因為整條pipeline已經
+能運作，只是輸出品質目前不足，繼續調G2P的邊際效益已經證明很低。
+
+### 之後重新啟用時的優先順序
+
+1. 用真正台語語者的乾淨參考音訊建立 speaker embedding（取代目前
+   cmu-arctic-xvectors的英語語者佔位）
+2. 確認 embedding extractor 跟 checkpoint 訓練時用的方法一致（不一致的
+   extractor可能導致embedding空間對不上，即使語者是對的也沒用）
+3. 換embedding後如果還是差，才評估用台語語音重新fine-tune SpeechT5
+4. 最後才回頭檢查少數G2P錯誤，不要再把整體品質問題歸因於羅馬字格式
+   （這輪已經驗證過格式不是主因）
+
 ## 系統設計原則（這次的實測讓這件事變得明確）
 
 > **TTS模型的輸入文字體系必須和上游翻譯輸出一致；否則模型音質再好，也會多出一個
