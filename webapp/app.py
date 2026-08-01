@@ -128,8 +128,12 @@ DATASET_BY_ID = {r["id"]: r for r in DATASET}
 
 def load_tokens():
     """token -> 顯示名稱 的對照表。存在本機、不進版控（整個 data/human_review/ 都在 .gitignore）。
-    測試者資料一律用不可猜的 token 當key，名字只拿來顯示，避免有人用猜的/知道的名字
-    就看到或接續別人的答案（例如打「正男」就能看到正男填過什麼）。"""
+
+    這裡刻意允許「打同一個名字就能接回進度」（見 create_or_reuse_tester_token），
+    這是開發者明確要的行為，取捨是：只要知道/猜到某人的名字，就能看到、接續他的
+    進度。因為測試者是開發者認識的一小群人，這個風險被判斷為可以接受，換取不用
+    記密碼、不用存書籤就能跨裝置接回進度的方便。之後如果測試者規模變大到不再
+    互相認識，這個設計要重新考慮（例如加PIN）。"""
     if not os.path.exists(TOKENS_PATH):
         return {}
     with open(TOKENS_PATH) as f:
@@ -141,12 +145,27 @@ def save_tokens(tokens):
         json.dump(tokens, f, ensure_ascii=False, indent=2)
 
 
+def find_token_by_name(display_name):
+    for token, info in load_tokens().items():
+        if info.get("name") == display_name:
+            return token
+    return None
+
+
 def create_tester_token(display_name):
     tokens = load_tokens()
     token = secrets.token_urlsafe(12)
     tokens[token] = {"name": display_name, "created_at": datetime.now(timezone.utc).isoformat()}
     save_tokens(tokens)
     return token
+
+
+def create_or_reuse_tester_token(display_name):
+    """同名字重複輸入會接回同一組token（同一份進度），不會開新的一輪。"""
+    existing = find_token_by_name(display_name)
+    if existing:
+        return existing
+    return create_tester_token(display_name)
 
 
 def tester_display_name(token):
@@ -253,15 +272,13 @@ def index():
 
 @app.route("/start", methods=["POST"])
 def start():
-    cookie_token = request.cookies.get(COOKIE_NAME, "")
-    if cookie_token and cookie_token in load_tokens():
-        # 這台裝置已經有進行中的session了，不要因為又填了一次名字就開新的、
-        # 讓舊進度變成看不到的孤兒資料。
-        return redirect(url_for("review", t=cookie_token))
     display_name = request.form.get("tester", "").strip()
     if not display_name:
         return redirect(url_for("index"))
-    token = create_tester_token(display_name)
+    # 主動輸入名字這個動作視為明確意圖，優先於裝置上舊的cookie
+    # （例如同一台電腦換人測試，第二個人打自己的名字，不該被cookie接回第一個人的進度）。
+    # 同名字會接回同一份進度，這是刻意的取捨，見 load_tokens() 註解。
+    token = create_or_reuse_tester_token(display_name)
     resp = redirect(url_for("review", t=token))
     return set_token_cookie(resp, token)
 
