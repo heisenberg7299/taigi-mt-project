@@ -7,13 +7,16 @@
 
 ## 候選清單
 
-| 模型 | 狀態 | 授權 | 規模 | 備註 |
-|---|---|---|---|---|
-| `neurlang/coqui-vits-suisiann-minnan-hokkien` | **已驗證可用（目前主力）** | CC-BY-SA-4.0 | VITS，CPU RTF~0.11-0.13 | 已產生200句候選音檔，正在收母語者回饋 |
-| MediaTek BreezyVoice-Taigi | **查無公開權重，無法實測** | 論文未揭露 | CosyVoice2微調，~10,000小時合成資料 | 論文（[arXiv:2603.19259](https://arxiv.org/html/2603.19259)）有報告數字但 HuggingFace 上找不到對應模型檔；已搜尋 MediaTek-Research 全部27個模型跟關鍵字「Taigi」「BreezyVoice」都沒有這個repo。**重要發現**：論文自報的「台語發音準確率只有59.2%」——連 MediaTek 專門投入的模型都只有六成不到的道地發音率，這代表台語TTS本身難度很高，不是我們資源不夠的問題 |
-| [MERaLiON-OmniVoice-Hokkien-TTS](https://huggingface.co/MERaLiON/MERaLiON-OmniVoice-Hokkien-TTS) | 可下載，未實測 | MERaLiON-3-Public-Licence（自訂條款，需另外詳讀是否允許研究/商用） | 0.8B參數，~2.7GB，支援聲音克隆 | **要注意的是這是新加坡福建話（Singapore Hokkien），不是台灣台語**——兩者同源但用詞、部分腔調有差異，混用可能被台灣母語者聽出「怪腔怪調」。自報指標：WER 0.33（不算低）、自然度8.4/10、DNSMOS 3.13/5 |
-| Curiousfox / wenxinkoh06 的 `speecht5_tailo-hokkien` 系列 | **已實測，確認不能直接用（見下方細節）** | MIT | SpeechT5微調（0.1B），體積小 | 命名用「tailo」明確針對台灣台語，授權最寬鬆 |
-| `chen778560489/coqui-vits-suisiann-minnan-hokkien` | 略過 | 同neurlang | - | 看起來是 neurlang 模型的 fork/鏡像，非獨立模型，跳過 |
+`Native input format`：模型原生吃什麼輸入。`Required frontend`：要接進我們pipeline
+（輸出是台語漢字`nan_han`）還需要額外加哪一層前處理。
+
+| 模型 | 狀態 | 授權 | 規模 | Native input format | Required frontend | 備註 |
+|---|---|---|---|---|---|---|
+| `neurlang/coqui-vits-suisiann-minnan-hokkien` | **已驗證可用（目前主力）** | CC-BY-SA-4.0 | VITS，CPU RTF~0.11-0.13 | Hanji（漢字，內建pygoruut自動轉IPA） | None | 已產生200句候選音檔，正在收母語者回饋 |
+| MediaTek BreezyVoice-Taigi | **查無公開權重，無法實測** | 論文未揭露 | CosyVoice2微調，~10,000小時合成資料 | 不明（論文未寫） | 不明 | 論文（[arXiv:2603.19259](https://arxiv.org/html/2603.19259)）有報告數字但 HuggingFace 上找不到對應模型檔；已搜尋 MediaTek-Research 全部27個模型跟關鍵字「Taigi」「BreezyVoice」都沒有這個repo。**重要發現**：論文自報的「台語發音準確率只有59.2%」——連 MediaTek 專門投入的模型都只有六成不到的道地發音率，這代表台語TTS本身難度很高，不是我們資源不夠的問題 |
+| [MERaLiON-OmniVoice-Hokkien-TTS](https://huggingface.co/MERaLiON/MERaLiON-OmniVoice-Hokkien-TTS) | 可下載，未實測 | MERaLiON-3-Public-Licence（自訂條款，需另外詳讀是否允許研究/商用） | 0.8B參數，~2.7GB，支援聲音克隆 | 待確認（`generate(text=..., language="nan")`，文件沒明講吃漢字還是羅馬字） | 待實測後才知道 | **要注意的是這是新加坡福建話（Singapore Hokkien），不是台灣台語**——兩者同源但用詞、部分腔調有差異，混用可能被台灣母語者聽出「怪腔怪調」。自報指標：WER 0.33（不算低）、自然度8.4/10、DNSMOS 3.13/5 |
+| Curiousfox / wenxinkoh06 的 `speecht5_tailo-hokkien` 系列 | **已實測，確認不能直接用（見下方細節）** | MIT | SpeechT5微調（0.1B），體積小 | Tâi-lô羅馬字 / 英文（漢字幾乎完全失效，見下） | Hanji→Tâi-lô G2P（目前專案沒有） | 命名用「tailo」明確針對台灣台語，授權最寬鬆 |
+| `chen778560489/coqui-vits-suisiann-minnan-hokkien` | 略過 | 同neurlang | - | 同neurlang | None | 看起來是 neurlang 模型的 fork/鏡像，非獨立模型，跳過 |
 
 ## `speecht5_tailo-hokkien`（wenxinkoh06/ver1.0.d）實測結果（2026-08-01）
 
@@ -46,20 +49,74 @@
 原因很清楚：這個repo沿用base SpeechT5的英文sentencepiece tokenizer，詞彙表裡沒有
 中文字，漢字輸入被切成幾乎沒有語意的token，模型自然生不出東西。
 
-### 對本專案的影響
+### 對本專案的影響——注意這是G2P問題，不是翻譯問題
 
 我們目前整個pipeline設計是以**台語漢字（`nan_han`）為主要表示法**（見`data/schema.md`），
 `tailo`欄位目前全專案沒有任何一筆資料填過。要用這個模型，必須先有一個可信賴的
-「台語漢字 → Tâi-lo」轉換層——這正好會撞回我們已經證實過的老問題（純辭典查表轉換
-不可靠，見PLAN.md「今天的實測教訓」第4點），只是方向反過來、換了一個要解決的子問題。
+「台語漢字 → Tâi-lô」轉換層。
 
-**先不投入做這層轉換**，除非之後有更明確的理由需要多一個TTS選項比較。
+**要澄清的一點**：這跟「華語→台語翻譯」（PLAN.md記錄過辭典逐詞替換失敗的那個問題）
+**不是同一個問題**，不能直接類比：
 
-## 建議下一步優先順序（更新）
+- 「華語→台語翻譯」：輸入是華語，要處理語意、詞彙選擇、語序轉換，才能得到自然台語句子
+- 「台語漢字→Tâi-lô」：輸入本身**已經是**正確台語漢字（例如「我欲去便所」），
+  只需要決定每個字詞的台語**讀音**——這是台語字音轉換／G2P問題
 
-1. ~~`speecht5_tailo-hokkien`~~ — 已測完，卡在漢字輸入無法使用，擱置
-2. **MERaLiON-OmniVoice-Hokkien-TTS**：模型較大（2.7GB）、授權條款需要先讀清楚，且是新加坡腔——測試目的主要是「即使腔調有落差，聽起來是否比逐字亂讀好」，用來當作極端對照組，不是候選部署對象
-3. BreezyVoice-Taigi 目前無法測（沒有公開權重），只能繼續追蹤 MediaTek 之後會不會釋出
+G2P仍然不簡單（一字多音、文白異讀、變調、詞組讀音、地區腔調、非教育部推薦字、
+華語台語漢字混用），但跟翻譯是不同性質、不同難度的兩件事，不應該混為一談。
+
+**工程結論仍然成立**：為了一個目前效果尚未證明優秀的SpeechT5 checkpoint，額外建立
+一套完整可靠的台語G2P，不符合現在的投入效益。先擱置。
+
+### 正式結論記錄
+
+```text
+Candidate: speecht5_tailo-hokkien
+Status: Deferred / Not suitable for current pipeline
+
+Finding:
+- Tâi-lô and English inputs produce audible, non-flat speech.
+- Traditional Chinese character inputs produce near-silent audio.
+- The failure is caused by input-tokenization incompatibility rather
+  than synthesis runtime failure.
+
+Technical cause:
+- The model retains the original SpeechT5 English-oriented tokenizer.
+- Traditional Chinese characters are not represented meaningfully.
+- The model therefore effectively requires romanized Tâi-lô input.
+
+Integration cost:
+- Requires a context-aware Taiwanese Hokkien Hanji-to-Tâi-lô G2P layer.
+- Reliable conversion must handle polyphonic characters, lexical readings,
+  literary/colloquial readings, tone sandhi and mixed orthography.
+- This additional dependency is not currently justified by the model's
+  unverified synthesis quality.
+
+Decision:
+- Exclude from the active TTS candidate shortlist.
+- Retain only as a possible future Tâi-lô-input baseline.
+```
+
+## 建議下一步優先順序（更新：改用淘汰漏斗式排序，不要在SpeechT5繼續投入）
+
+1. **優先測能直接吃台語漢字的模型** — 避免多一層G2P依賴，`neurlang` VITS目前是唯一
+   一個符合這個條件並已驗證的候選
+2. **MERaLiON-OmniVoice-Hokkien-TTS** — 先確認它實際吃的是漢字還是羅馬字（目前文件
+   沒寫清楚），是漢字才值得深測；是羅馬字則跟speecht5同樣先擱置G2P投入
+3. **CosyVoice／Qwen系列重新實測** — 用同一批漢字、Tâi-lô、英文、中英台混合輸入
+   統一測過一輪，不要只憑今天稍早那次「無台語支援」的初步結論就完全排除，換句話說
+   要用跟這次一樣的客觀量測方法（能量/靜音比例）重新確認，不能只憑主觀聽感
+4. **建立候選淘汰門檻** — 靜音比例、有效語音長度、生成速度(RTF)、漏字率、人工可懂度
+   五個指標，未來每測一個新候選都套用同一組門檻，不要每次都重新發明評分標準
+5. **G2P最後才評估** — 只有在「最佳候選模型必須吃Tâi-lô輸入」且「音質明顯勝出現有
+   neurlang VITS」兩個條件都成立時，才值得投入建置台語漢字→Tâi-lô的G2P層
+
+## 系統設計原則（這次的實測讓這件事變得明確）
+
+> **TTS模型的輸入文字體系必須和上游翻譯輸出一致；否則模型音質再好，也會多出一個
+> 高風險的語言前處理模組。** 選TTS候選時，「native input format跟我們的pipeline
+> 相不相容」跟「音質好不好」同樣重要，甚至該排在音質評分之前先篩過一輪——不相容
+> 的候選不管音質多好，都要先加計一整層G2P的開發與維護成本。
 
 ## 對本研究的意義
 
