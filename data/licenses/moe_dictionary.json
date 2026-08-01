@@ -1,0 +1,8 @@
+{
+  "name": "moe_dictionary",
+  "license": "open (g0v moedict-data-twblg，未明確標註單一授權，屬公開資料整理)",
+  "category": "internal_ok",
+  "source_url": "https://github.com/g0v/moedict-data-twblg",
+  "downloaded_at": "2026-07-31T09:07:01.847778+00:00",
+  "notes": "教育部官方辭典資料，g0v 社群整理成 JSON。適合當辭典約束/術語檢查用，不可直接逐詞替換當翻譯引擎。"
+}

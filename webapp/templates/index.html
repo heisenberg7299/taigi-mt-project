@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>台語翻譯候選答案 - 母語者驗證</h1>
+<div class="card">
+  <p>這裡有 200 句「中文 -> 台語」機器翻譯候選句，需要你幫忙判斷：</p>
+  <ul>
+    <li>翻譯得對不對、自然不自然</li>
+    <li>如果不對，正確的台語應該怎麼說</li>
+  </ul>
+  <p class="muted">每次隨機抽 10 句一輪，每句大概花 10-20 秒，一輪約 2-3 分鐘。做完一輪可以休息，要繼續再測下一輪，系統會記得你做過哪些。</p>
+  <form action="/start" method="post">
+    <div class="field">
+      <label class="field-label" for="tester">你的名字或代號</label>
+      <input type="text" id="tester" name="tester" placeholder="例如：阿明" required autofocus>
+    </div>
+    <button type="submit">開始驗證</button>
+  </form>
+</div>
+<footer><a href="/progress">查看整體進度</a></footer>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h1>✅ 這一輪10題完成了！</h1>
+  <p>{{ tester }}，辛苦了。你目前總共完成 {{ done }} / {{ total }} 句。</p>
+  {% if remaining > 0 %}
+  <p class="muted">還剩下 {{ remaining }} 句沒測過。可以先休息，之後再回來繼續；或是現在再測一輪（會隨機抽新的10題，不會重複剛剛做過的）。</p>
+  <form action="/new_batch" method="post">
+    <input type="hidden" name="tester" value="{{ tester }}">
+    <button type="submit">再測10題 →</button>
+  </form>
+  {% else %}
+  <p>所有句子都測過了，太感謝了！🎉</p>
+  {% endif %}
+</div>
+<footer><a href="/progress">查看整體進度</a></footer>
+{% endblock %}

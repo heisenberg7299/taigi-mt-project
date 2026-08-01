@@ -1,0 +1,8 @@
+{
+  "name": "taigispeech",
+  "license": "cc-by-4.0",
+  "category": "internal_ok",
+  "source_url": "https://huggingface.co/datasets/TaigiSpeech/TaigiSpeech",
+  "downloaded_at": "2026-07-31T09:27:44.714174+00:00",
+  "notes": "3,079筆台語語音、21位語者、8種服務/緊急意圖分類。適合方向1（台語語音->意圖分類），非翻譯語料。"
+}

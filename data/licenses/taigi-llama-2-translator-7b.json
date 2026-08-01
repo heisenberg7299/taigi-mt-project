@@ -1,0 +1,9 @@
+{
+  "name": "taigi-llama-2-translator-7b",
+  "license": "cc-by-nc-sa-4.0",
+  "category": "nc_only",
+  "source_url": "https://huggingface.co/Bohanlu/Taigi-Llama-2-Translator-7B",
+  "gguf_url": "https://huggingface.co/RichardErkhov/Bohanlu_-_Taigi-Llama-2-Translator-7B-gguf",
+  "downloaded_at": "2026-08-01T00:00:00+00:00",
+  "notes": "Baseline 2（比較用）。GGUF Q4_K_M 版本透過 Ollama 本機執行（hf.co 直接 pull）。CC-BY-NC-SA-4.0，僅供研究/baseline比較，不可用於商用部署。prompt 格式：[TRANS]\\n{句子}\\n[/TRANS]\\n[HAN]\\n（目標語言碼可換成 ZH/EN/POJ/HL）。"
+}

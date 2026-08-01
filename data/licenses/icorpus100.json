@@ -1,0 +1,8 @@
+{
+  "name": "icorpus100",
+  "license": "cc-by-nc-4.0",
+  "category": "nc_only",
+  "source_url": "https://huggingface.co/datasets/Bohanlu/iCorpus-100",
+  "downloaded_at": "2026-07-31T09:07:02.702079+00:00",
+  "notes": "iCorpus 完整版的 100 句子集，僅供研究測試 pipeline，不可用於商用模型訓練。完整 iCorpus 取得方式待確認。"
+}

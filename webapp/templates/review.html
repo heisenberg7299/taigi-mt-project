@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="progress-bar"><div style="width: {{ (batch_position / batch_size * 100) | round(1) }}%"></div></div>
+<p class="muted">這一輪第 {{ batch_position }} / {{ batch_size }} 題 · 總共已完成 {{ done }} / {{ total }} 句（測試者：{{ tester }}） · <a href="/progress">整體進度</a></p>
+
+<div class="card">
+  <span class="badge">{{ item.category_label }}</span>
+  {% for c in item.failed_checks %}
+    <span class="badge badge-warn" title="{{ c.reason }}">⚠ {{ c.label }}</span>
+  {% endfor %}
+
+  <p class="muted" style="margin-top:12px;">中文原句</p>
+  <div class="zh">{{ item.zh }}</div>
+
+  <p class="muted">台語候選翻譯（AI模型產生，請幫忙檢查）</p>
+  <div class="candidate">{{ item.candidate or "（無輸出）" }}</div>
+
+  {% if item.has_audio %}
+  <audio controls src="/audio/{{ item.id }}"></audio>
+  {% endif %}
+
+  {% if item.dict_reference %}
+  <details style="margin-top:8px;">
+    <summary class="muted">顯示辭典逐詞替換版本（僅供對照，已知品質差，不用特別評）</summary>
+    <p class="muted">{{ item.dict_reference }}</p>
+  </details>
+  {% endif %}
+</div>
+
+<form action="/submit" method="post" class="card">
+  <input type="hidden" name="tester" value="{{ tester }}">
+  <input type="hidden" name="id" value="{{ item.id }}">
+
+  <div class="field">
+    <label class="field-label">這句翻譯得怎麼樣？</label>
+    <div class="radio-group">
+      <label><input type="radio" name="verdict" value="correct" {% if existing and existing.verdict=='correct' %}checked{% endif %} required> ✅ 正確、自然，可以直接用</label><br>
+      <label><input type="radio" name="verdict" value="needs_edit" {% if existing and existing.verdict=='needs_edit' %}checked{% endif %}> ✏️ 意思大致對，但需要修改</label><br>
+      <label><input type="radio" name="verdict" value="wrong" {% if existing and existing.verdict=='wrong' %}checked{% endif %}> ❌ 錯誤或語意不對</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="field-label" for="corrected">正確／修改後的台語（漢字）— 如果上面選「正確」可以不改，選「需要修改」或「錯誤」請填正確版本</label>
+    <textarea id="corrected" name="corrected" rows="2">{{ existing.corrected_nan_han if existing and existing.corrected_nan_han else (item.candidate or "") }}</textarea>
+  </div>
+
+  <div class="field">
+    <label class="field-label">流暢度（1=完全不自然，5=非常自然）</label>
+    <div class="rating radio-group">
+      {% for i in range(1,6) %}
+      <label><input type="radio" name="fluency" value="{{ i }}" {% if existing and existing.fluency==i %}checked{% endif %}> {{ i }}</label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="field-label">保真度／意思有沒有保留完整（1=完全走樣，5=意思完全對）</label>
+    <div class="rating radio-group">
+      {% for i in range(1,6) %}
+      <label><input type="radio" name="adequacy" value="{{ i }}" {% if existing and existing.adequacy==i %}checked{% endif %}> {{ i }}</label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="field-label" for="note">備註（選填，例如：這個詞我們這邊講法不一樣）</label>
+    <textarea id="note" name="note" rows="2">{{ existing.note if existing else "" }}</textarea>
+  </div>
+
+  <button type="submit">送出，下一句 →</button>
+</form>
+
+<p class="muted">
+  {% set idx = all_ids.index(item.id) %}
+  {% if idx > 0 %}<a href="/review?tester={{ tester }}&id={{ all_ids[idx-1] }}">← 上一句</a>{% endif %}
+  &nbsp;|&nbsp; {{ item.id }} &nbsp;|&nbsp;
+  {% if idx < all_ids|length - 1 %}<a href="/review?tester={{ tester }}&id={{ all_ids[idx+1] }}">下一句 →</a>{% endif %}
+</p>
+{% endblock %}

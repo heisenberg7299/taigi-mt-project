@@ -1,0 +1,200 @@
+{"id": "daily_001", "zh": "今天天氣很好。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "今仔日天色真清氣。"}
+{"id": "daily_002", "zh": "你吃飯了嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "你食飯矣未？"}
+{"id": "daily_003", "zh": "現在幾點了？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "這馬幾點矣？"}
+{"id": "daily_004", "zh": "外面在下雨。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "外口咧落雨。"}
+{"id": "daily_005", "zh": "我有點累了，想休息一下。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我小可仔忝矣，欲歇睏一下。"}
+{"id": "daily_006", "zh": "謝謝你的幫忙。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "感謝你共我鬥相共。"}
+{"id": "daily_007", "zh": "早安，你今天好嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "早起，你今仔日敢會爽快？"}
+{"id": "daily_008", "zh": "晚安，好好睡一覺。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "暗安，好好仔睏一下。"}
+{"id": "daily_009", "zh": "這附近有便利商店嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "這箍圍仔敢有便利商店？"}
+{"id": "daily_010", "zh": "我想喝一杯熱茶。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我欲啉一喙燒茶。"}
+{"id": "daily_011", "zh": "天氣有點冷，要記得穿外套。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "天氣有較寒，愛會記得加疊一領外衫。"}
+{"id": "daily_012", "zh": "你叫什麼名字？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "你號做啥物名？"}
+{"id": "daily_013", "zh": "很高興認識你。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "真歡喜佮你做朋友。"}
+{"id": "daily_014", "zh": "今天是星期幾？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "今仔日是禮拜幾？"}
+{"id": "daily_015", "zh": "我肚子有點餓了。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我腹肚有淡薄仔枵。"}
+{"id": "daily_016", "zh": "可以幫我開燈嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "會使共我開電火無？"}
+{"id": "daily_017", "zh": "電視音量太大了，可以調小聲一點嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "電視開遐爾大聲是咧創啥物？"}
+{"id": "daily_018", "zh": "我想聽音樂。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我欲聽音樂。"}
+{"id": "daily_019", "zh": "窗戶可以打開嗎，有點悶。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "窗仔門敢會當開咧？有淡薄仔鬱卒。"}
+{"id": "daily_020", "zh": "廁所在哪裡？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "便所佇佗位？"}
+{"id": "daily_021", "zh": "我想出去散步。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我欲來去行跤花。"}
+{"id": "daily_022", "zh": "今天心情不錯。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "今仔日心肝真爽快。"}
+{"id": "daily_023", "zh": "你會說台語嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "你敢會曉講臺語？"}
+{"id": "daily_024", "zh": "這個東西怎麼用？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "這个物件是欲按怎用？"}
+{"id": "daily_025", "zh": "麻煩你再說一次。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "麻煩你閣講一遍。"}
+{"id": "daily_026", "zh": "我聽不太清楚，可以講大聲一點嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我聽無啥清楚，會使較大聲咧無？"}
+{"id": "daily_027", "zh": "現在幾點該吃藥了？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "這馬幾點仔愛食藥仔矣？"}
+{"id": "daily_028", "zh": "我想找個地方坐下來。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我想欲揣一个所在坐落來。"}
+{"id": "daily_029", "zh": "這裡可以充電嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "遮敢會使充電？"}
+{"id": "daily_030", "zh": "幫我把音樂關掉。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "共音樂關掉。"}
+{"id": "daily_031", "zh": "你可以幫我拿一下眼鏡嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "你共我提一副目鏡好無？"}
+{"id": "daily_032", "zh": "我想看電視。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我欲來看電視。"}
+{"id": "daily_033", "zh": "今天有訪客要來。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "今仔日有人欲來相揣。"}
+{"id": "daily_034", "zh": "這件衣服是我的。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "這領衫是我的。"}
+{"id": "daily_035", "zh": "我想睡覺了。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我欲來去睏矣。"}
+{"id": "daily_036", "zh": "外面很多人在排隊。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "外口真濟人咧排隊。"}
+{"id": "daily_037", "zh": "可以幫我倒一杯水嗎？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "會使共我添一喙仔茶無？"}
+{"id": "daily_038", "zh": "這條路怎麼走？", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "這條路欲按怎行？"}
+{"id": "daily_039", "zh": "我想跟你聊聊天。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "我佮你想欲開講。"}
+{"id": "daily_040", "zh": "祝你有美好的一天。", "category": "daily", "check_type": null, "baseline_taigi_llama_han": "祝你一工好天。"}
+{"id": "medical_001", "zh": "我需要喝水。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我需要啉水。"}
+{"id": "medical_002", "zh": "我頭有點暈。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我的頭有淡薄仔眩。"}
+{"id": "medical_003", "zh": "我肚子很痛。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我腹肚足疼的。"}
+{"id": "medical_004", "zh": "我今天要量血壓。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我今仔日欲來驗血壓。"}
+{"id": "medical_005", "zh": "護理師什麼時候會來？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "護理師當時才會來？"}
+{"id": "medical_006", "zh": "我需要吃藥了嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我敢有需要食藥仔？"}
+{"id": "medical_007", "zh": "這個藥要飯前吃還是飯後吃？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "這帖藥仔是欲食飯進前食，抑是食飯了才食？"}
+{"id": "medical_008", "zh": "我覺得呼吸有點喘。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我感覺咧喘氣，有較無爽快。"}
+{"id": "medical_009", "zh": "可以幫我量體溫嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "會當共我量體溫無？"}
+{"id": "medical_010", "zh": "我想上廁所，需要人扶我。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我想欲去放尿，愛有人共我扶咧。"}
+{"id": "medical_011", "zh": "我的傷口有點癢。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我這个空喙有淡薄仔刺鑿。"}
+{"id": "medical_012", "zh": "醫生什麼時候會來看我？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "醫生是當時欲來看我？"}
+{"id": "medical_013", "zh": "我今天要做復健。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我今仔日欲做復健。"}
+{"id": "medical_014", "zh": "我需要輪椅。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我需要輪椅。"}
+{"id": "medical_015", "zh": "我覺得有點噁心想吐。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我感覺有淡薄仔歹食。"}
+{"id": "medical_016", "zh": "打針會不會痛？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "注預防射會疼袂？"}
+{"id": "medical_017", "zh": "我需要換藥。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我愛換藥仔。"}
+{"id": "medical_018", "zh": "我今天血糖有點高。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我今仔日血糖有較懸。"}
+{"id": "medical_019", "zh": "可以幫我叫醫生嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "會使共我敲電話予醫生無？"}
+{"id": "medical_020", "zh": "我睡不著，可以給我一顆安眠藥嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我睏袂去，會使予我一粒安神仔無？"}
+{"id": "medical_021", "zh": "我今天要抽血檢查。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我今仔日欲驗血。"}
+{"id": "medical_022", "zh": "傷口需要多久才會好？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "創傷愛偌久才會好？"}
+{"id": "medical_023", "zh": "我這幾天都沒有食慾。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我這幾工攏無食慾。"}
+{"id": "medical_024", "zh": "我需要拿藥單去領藥。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我愛提藥單去領藥。"}
+{"id": "medical_025", "zh": "這個藥有什麼副作用嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "這帖藥仔有啥物副作用？"}
+{"id": "medical_026", "zh": "我腳有點腫，正常嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我跤有淡薄仔膨疱，敢有正常？"}
+{"id": "medical_027", "zh": "我需要做超音波檢查。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我愛做超音波檢查。"}
+{"id": "medical_028", "zh": "家屬什麼時候可以來探病？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "家屬當時會當來看病人？"}
+{"id": "medical_029", "zh": "我今天可以出院嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我今仔日敢會使出院？"}
+{"id": "medical_030", "zh": "我需要簽手術同意書。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我愛簽手術同意書。"}
+{"id": "medical_031", "zh": "我對這個藥過敏。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我這个藥仔會過敏。"}
+{"id": "medical_032", "zh": "我這幾天一直咳嗽。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我這幾工仔一直咧咳痰。"}
+{"id": "medical_033", "zh": "我需要戴氧氣罩嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我敢著愛掛氧氣面罩仔？"}
+{"id": "medical_034", "zh": "護理師，我點滴打完了。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "護理師，我注射了矣。"}
+{"id": "medical_035", "zh": "我需要一個枕頭墊高腳。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我需要一个枕頭共跤墊懸。"}
+{"id": "medical_036", "zh": "我今天要照X光。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我今仔日欲照電光。"}
+{"id": "medical_037", "zh": "我心跳好像有點快。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我心肝頭敢若咧噗噗惝。"}
+{"id": "medical_038", "zh": "可以幫我調整病床角度嗎？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "會使共病床小徙一下無？"}
+{"id": "medical_039", "zh": "我這個禮拜要回診。", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "我這禮拜欲轉診。"}
+{"id": "medical_040", "zh": "出院之後要注意什麼事？", "category": "medical", "check_type": null, "baseline_taigi_llama_han": "出院了後愛注意啥物代誌？"}
+{"id": "robot_service_001", "zh": "請幫我叫護理師。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共我敲電話予護理師。"}
+{"id": "robot_service_002", "zh": "電梯在哪個方向？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "電梯佇佗位？"}
+{"id": "robot_service_003", "zh": "請帶我去診間。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請𤆬我來診療室。"}
+{"id": "robot_service_004", "zh": "可以幫我拿藥過來嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會使共你提藥仔來無？"}
+{"id": "robot_service_005", "zh": "麻煩你通知家屬我醒了。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你通知家屬我恢復正常矣。"}
+{"id": "robot_service_006", "zh": "請幫我按呼叫鈴。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請共我擛呼叫鈴仔。"}
+{"id": "robot_service_007", "zh": "可以幫我拿輪椅過來嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會當共我提輪椅來一下無？"}
+{"id": "robot_service_008", "zh": "請帶我去化驗室。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請𤆬我來去化驗室。"}
+{"id": "robot_service_009", "zh": "幫我查一下今天的看診號碼。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "共我揣看今仔日的號頭。"}
+{"id": "robot_service_010", "zh": "可以幫我搬這個東西嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "看會使共我鬥提彼項物件無？"}
+{"id": "robot_service_011", "zh": "請幫我開門。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共我拍開門扇。"}
+{"id": "robot_service_012", "zh": "麻煩你幫我拿餐盤過來。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你共飯碗提過來。"}
+{"id": "robot_service_013", "zh": "請帶我去洗手間。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請𤆬我去便所。"}
+{"id": "robot_service_014", "zh": "可以幫我叫計程車嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會使共我招一台計程車無？"}
+{"id": "robot_service_015", "zh": "請幫我拿掛號單。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共我提掛號批。"}
+{"id": "robot_service_016", "zh": "麻煩你幫我看一下時間。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你共我看覓仔時間。"}
+{"id": "robot_service_017", "zh": "請帶我去候診區。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請𤆬我來去等號。"}
+{"id": "robot_service_018", "zh": "可以幫我按電梯嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會使共我鬥𤆬路無？"}
+{"id": "robot_service_019", "zh": "請幫我通知醫生病人狀況有變化。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共醫生講，病人有變款矣。"}
+{"id": "robot_service_020", "zh": "麻煩你幫我確認一下床號。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你共我確定一睏位。"}
+{"id": "robot_service_021", "zh": "請幫我把窗簾拉起來。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共我鬥幔窗仔布。"}
+{"id": "robot_service_022", "zh": "可以幫我把餐具收走嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會當共碗箸提去囥予好無？"}
+{"id": "robot_service_023", "zh": "請帶我去領藥櫃檯。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請𤆬我來去領藥櫥。"}
+{"id": "robot_service_024", "zh": "麻煩你幫我量一下血壓。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你共我量看血壓有懸無？"}
+{"id": "robot_service_025", "zh": "請幫我叫家屬過來。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共家屬招--一-下。"}
+{"id": "robot_service_026", "zh": "可以幫忙推我去復健室嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會當共我鬥推去復健室無？"}
+{"id": "robot_service_027", "zh": "請幫我把燈打開。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共電火開開咧。"}
+{"id": "robot_service_028", "zh": "麻煩你幫我把水杯裝滿。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你共我鬥斟一杯茶。"}
+{"id": "robot_service_029", "zh": "請帶我去急診室。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請𤆬我來去急診室。"}
+{"id": "robot_service_030", "zh": "可以幫我確認明天的預約時間嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會當共我確定明仔載的預約時間無？"}
+{"id": "robot_service_031", "zh": "請幫我把這份資料交給護理站。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共這份資料交予護理站。"}
+{"id": "robot_service_032", "zh": "麻煩你幫我叫社工。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你共我敲電話予社工。"}
+{"id": "robot_service_033", "zh": "請帶我去做復健運動。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請𤆬我去做復健運動。"}
+{"id": "robot_service_034", "zh": "可以幫我把垃圾拿去丟嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "會使共糞埽提去擲無？"}
+{"id": "robot_service_035", "zh": "請幫我調整空調溫度。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請共冷氣的溫度調予較涼咧。"}
+{"id": "robot_service_036", "zh": "麻煩你幫我登記探病訪客。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你共我登記探病。"}
+{"id": "robot_service_037", "zh": "請帶我到病房外走走。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你𤆬我去病房外仔行行咧。"}
+{"id": "robot_service_038", "zh": "可以幫我確認病歷有沒有更新嗎？", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "看會使共病歷簿仔更新無？"}
+{"id": "robot_service_039", "zh": "請幫我提醒明天要回診。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "請你共我提醒明仔載愛轉診。"}
+{"id": "robot_service_040", "zh": "麻煩你陪我聊聊天，我有點無聊。", "category": "robot_service", "check_type": null, "baseline_taigi_llama_han": "麻煩你陪我開講一下，我有寡無聊。"}
+{"id": "negation_risk_001", "zh": "我沒有胸痛。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無心絞疼。"}
+{"id": "negation_risk_002", "zh": "我不需要打針。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無愛注預防射。"}
+{"id": "negation_risk_003", "zh": "我沒有發燒。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無發燒。"}
+{"id": "negation_risk_004", "zh": "我不想吃這個藥。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無愛食這味藥仔。"}
+{"id": "negation_risk_005", "zh": "我沒有過敏史。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無過敏的病史。"}
+{"id": "negation_risk_006", "zh": "我還沒有吃藥。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我猶未食藥仔。"}
+{"id": "negation_risk_007", "zh": "我不會自己走路，需要扶我。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我袂曉家己行路，著愛扶我。"}
+{"id": "negation_risk_008", "zh": "我沒有辦法呼吸，很喘。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無法度喘氣，足喘的。"}
+{"id": "negation_risk_009", "zh": "傷口沒有流血了。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "空喙無閣流血矣。"}
+{"id": "negation_risk_010", "zh": "我今天沒有食慾。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我今仔日無想欲食飯。"}
+{"id": "negation_risk_011", "zh": "我沒有辦法起床。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無法度起來。"}
+{"id": "negation_risk_012", "zh": "這個藥我不能吃，會過敏。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "這帖藥仔我袂食得，會過敏。"}
+{"id": "negation_risk_013", "zh": "我沒有家屬可以來陪我。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無家屬通好來陪我。"}
+{"id": "negation_risk_014", "zh": "我還沒有做檢查。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我猶未做檢查。"}
+{"id": "negation_risk_015", "zh": "我不確定這個藥有沒有吃過。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我毋知影這帖藥仔敢有食過。"}
+{"id": "negation_risk_016", "zh": "我沒有意識到自己跌倒了。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我毋知影家己有跋一倒。"}
+{"id": "negation_risk_017", "zh": "我不痛，只是有點麻。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無疼，干焦小可仔麻。"}
+{"id": "negation_risk_018", "zh": "傷口還沒有癒合。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "空喙猶未收束。"}
+{"id": "negation_risk_019", "zh": "我沒有辦法自己上廁所。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無法度家己去便所。"}
+{"id": "negation_risk_020", "zh": "這不是我的藥。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "這毋是我的藥仔。"}
+{"id": "negation_risk_021", "zh": "我不是這個病房的病人。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我毋是這間病院的患者。"}
+{"id": "negation_risk_022", "zh": "我沒有簽過這份同意書。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我毋捌簽名過這个同意書。"}
+{"id": "negation_risk_023", "zh": "我沒有辦法忍受這個疼痛。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無法度忍耐這款的艱苦。"}
+{"id": "negation_risk_024", "zh": "我今天還沒有量血壓。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我今仔日猶未量血壓。"}
+{"id": "negation_risk_025", "zh": "這個症狀跟昨天不一樣。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "這个症頭佮昨昏無仝款。"}
+{"id": "negation_risk_026", "zh": "我沒有力氣說話。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無氣力通講話。"}
+{"id": "negation_risk_027", "zh": "我不確定藥吃了沒有。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我毋知影藥仔有食無。"}
+{"id": "negation_risk_028", "zh": "情況並不緊急，不用叫醫生。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "代誌無偌緊，免叫醫生來。"}
+{"id": "negation_risk_029", "zh": "我沒有辦法睜開眼睛。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "我無法度共目睭褫開。"}
+{"id": "negation_risk_030", "zh": "這個不是緊急狀況，請不要叫救護車。", "category": "negation_risk", "check_type": "negation", "baseline_taigi_llama_han": "這毋是緊急的狀況，你莫叫救護車。"}
+{"id": "numbers_id_001", "zh": "王先生在302號病房。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "王先生蹛佇三零二號病房。"}
+{"id": "numbers_id_002", "zh": "請幫我叫三號病房的護理師。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "請你共我敲三號病房的護理師。"}
+{"id": "numbers_id_003", "zh": "我的看診號碼是15號。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "我的看診號碼是十五號。"}
+{"id": "numbers_id_004", "zh": "陳小姐今天下午兩點要回診。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "陳小姐今仔日下晡兩點欲覆診。"}
+{"id": "numbers_id_005", "zh": "請在下午3點半提醒我吃藥。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "請佇下晡三點半提醒我食藥仔。"}
+{"id": "numbers_id_006", "zh": "我住在501病房，7號床。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "我蹛佇五百一號病房七號床。"}
+{"id": "numbers_id_007", "zh": "林醫師大概10分鐘後會到。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "林醫師差不多十分鐘後會到。"}
+{"id": "numbers_id_008", "zh": "這個藥一天要吃三次，每次一顆。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "這帖藥仔一日著食三擺，一擺食一粒。"}
+{"id": "numbers_id_009", "zh": "我今天已經走了2000步。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "我今仔日已經行兩千步矣。"}
+{"id": "numbers_id_010", "zh": "血壓是120/80，體溫36.5度。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "血壓是一百二十/八十，體溫三十六點五度。"}
+{"id": "numbers_id_011", "zh": "李先生的家屬電話是0912345678。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "李先生的家屬電話是空九一二三四五六七八。"}
+{"id": "numbers_id_012", "zh": "手術預定在明天早上9點開始。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "手術排定佇明仔早起九點開刀。"}
+{"id": "numbers_id_013", "zh": "我在這裡住院已經第5天了。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "我佇遮蹛院到今第五工矣。"}
+{"id": "numbers_id_014", "zh": "張阿嬤住在8樓818號病房。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "張阿婆蹛佇八樓八一八號的病房。"}
+{"id": "numbers_id_015", "zh": "請幫我確認一下12床的病人狀況。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "請你共我確定一下十二號的患者的狀況。"}
+{"id": "numbers_id_016", "zh": "我今天早上量的血糖是110。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "我今仔日早起驗的血糖是一百十一。"}
+{"id": "numbers_id_017", "zh": "下一次回診是2026年8月15號。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "後擺轉診是二〇二六年八月初一。"}
+{"id": "numbers_id_018", "zh": "請把這份資料送到護理站第2窗口。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "請你共這份資料送去護理站的第二窗仔。"}
+{"id": "numbers_id_019", "zh": "我已經打了三針點滴。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "我已經共你注射三支點滴矣。"}
+{"id": "numbers_id_020", "zh": "探病時間是下午2點到4點。", "category": "numbers_id", "check_type": "number_consistency", "baseline_taigi_llama_han": "探病的時間是下晡兩點到四點。"}
+{"id": "code_mixing_001", "zh": "幫我叫 nurse 過來。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "共護士叫來。"}
+{"id": "code_mixing_002", "zh": "我要去 restroom 一下。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我欲來去便所一下。"}
+{"id": "code_mixing_003", "zh": "醫生說要 check 一下我的血壓。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "醫生講愛檢查我的血壓。"}
+{"id": "code_mixing_004", "zh": "可以幫我 call 一下家屬嗎？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "會當共家屬敲一下無？"}
+{"id": "code_mixing_005", "zh": "我需要 wheelchair，麻煩幫我推過來。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我需要輪椅，麻煩你共我推過來。"}
+{"id": "code_mixing_006", "zh": "這個 medicine 要怎麼吃？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "這帖藥仔欲按怎食？"}
+{"id": "code_mixing_007", "zh": "請帶我去 X光室 check 一下。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "請𤆬我來去X光室檢查一下。"}
+{"id": "code_mixing_008", "zh": "我的 appointment 是幾點？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我的掛號是幾點？"}
+{"id": "code_mixing_009", "zh": "可以幫我 confirm 一下明天的 schedule 嗎？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "會使共我確認一下仔後日仔的行程無？"}
+{"id": "code_mixing_010", "zh": "護理師說要幫我 change 藥。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "護理師講欲共我換藥。"}
+{"id": "code_mixing_011", "zh": "我覺得有點 dizzy，頭很暈。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我感覺有淡薄仔眩眩，頭殼真𠢕眩。"}
+{"id": "code_mixing_012", "zh": "可以請 doctor 過來看一下嗎？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "會使請醫生來共咱看看咧無？"}
+{"id": "code_mixing_013", "zh": "我今天要做 X-ray 檢查。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我今仔日欲做X光檢查。"}
+{"id": "code_mixing_014", "zh": "麻煩幫我 book 一下復健時間。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "麻煩你共我登記一下復健的時間。"}
+{"id": "code_mixing_015", "zh": "我的 blood pressure 是不是太高了？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我的血壓敢若傷懸咧？"}
+{"id": "code_mixing_016", "zh": "可以幫我 check in 嗎？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "會使共我登記一下無？"}
+{"id": "code_mixing_017", "zh": "我需要一個 pillow 墊高腳。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我需要一个枕頭共跤墊懸。"}
+{"id": "code_mixing_018", "zh": "幫我看一下今天的 schedule。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "共我看覓今仔日的行程。"}
+{"id": "code_mixing_019", "zh": "我想喝水，water 在哪裡？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我欲啉水，水佇佗位？"}
+{"id": "code_mixing_020", "zh": "可以幫我 print 一份藥單嗎？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "會使共我印一張藥單無？"}
+{"id": "code_mixing_021", "zh": "我 feel 有點 nauseous，想吐。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我感覺有淡薄仔反胃、想欲嘔心。"}
+{"id": "code_mixing_022", "zh": "麻煩你幫我 update 一下病歷。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "麻煩你共我更新一下病歷。"}
+{"id": "code_mixing_023", "zh": "我需要 rest 一下，有點累。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我需要歇睏一下，有小可仔忝。"}
+{"id": "code_mixing_024", "zh": "可以幫我叫 taxi 嗎？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "會使共我招計程車無？"}
+{"id": "code_mixing_025", "zh": "這個 form 要怎麼填？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "這个form欲按怎寫？"}
+{"id": "code_mixing_026", "zh": "幫我確認一下 room number。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "共我確定一下房間號碼。"}
+{"id": "code_mixing_027", "zh": "我想跟 social worker 聊一下。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "我想欲佮社工人員開講一下。"}
+{"id": "code_mixing_028", "zh": "可以幫我 reschedule 明天的回診嗎？", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "會使共明仔載的覆診排予我無去上班無？"}
+{"id": "code_mixing_029", "zh": "護理師，我的 IV 好像打完了。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "護理師，我的點滴敢若注射了矣。"}
+{"id": "code_mixing_030", "zh": "Thank you，謝謝你的幫忙。", "category": "code_mixing", "check_type": "code_mixing", "baseline_taigi_llama_han": "感謝你，多謝你的鬥相共。"}

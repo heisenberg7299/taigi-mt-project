@@ -1,0 +1,8 @@
+{
+  "name": "neurlang-vits-suisiann",
+  "license": "cc-by-sa-4.0",
+  "category": "review_needed",
+  "source_url": "https://huggingface.co/neurlang/coqui-vits-suisiann-minnan-hokkien",
+  "downloaded_at": "2026-07-31",
+  "notes": "唯一驗證過真的會講台語的免費TTS模型（CosyVoice3/Qwen3-TTS皆無可用台語）。CC-BY-SA-4.0為分享相同方式授權，商用前需法務確認衍生作品授權義務。單一女聲，無語音克隆能力。訓練語料為SuiSiann Dataset（教育部認可之台語語音集）。"
+}

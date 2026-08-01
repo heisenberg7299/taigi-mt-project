@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# 大型/可重新產生的檔案，不進版控
+models/
+data/raw/
+tests/audio/
+
+# 測試者的即時回覆資料（個人意見、持續累積），不進版控
+data/human_review/
+data/processed/
+
+# Ollama / TTS 本機執行期產生的檔案
+*.wav
