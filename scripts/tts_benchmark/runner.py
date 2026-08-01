@@ -16,6 +16,7 @@ AUDIO_DIR = os.path.join(ROOT, "tests", "tts_benchmark_audio")
 
 CSV_FIELDS = [
     "model", "input_format", "required_frontend", "id", "category", "text",
+    "frontend_output",
     "generation_success", "error",
     "audio_duration_sec", "silence_ratio", "effective_speech_sec", "rtf",
     "omission_rate", "intelligibility_score", "decision", "audio_path",
@@ -48,6 +49,7 @@ def run_adapter(adapter):
             "intelligibility_score": None,
         }
         try:
+            adapter.last_frontend_output = None
             t0 = time.time()
             samples, sample_rate = adapter.synthesize(item["text"])
             wall_clock = time.time() - t0
@@ -58,6 +60,7 @@ def run_adapter(adapter):
             row.update(metrics)
             row["generation_success"] = True
             row["error"] = None
+            row["frontend_output"] = getattr(adapter, "last_frontend_output", None)
             row["audio_path"] = os.path.relpath(audio_path, ROOT)
             row["decision"] = decide(True, metrics)
             print(f"  [{item['id']}] OK duration={metrics['audio_duration_sec']}s "
@@ -65,6 +68,7 @@ def run_adapter(adapter):
         except Exception as e:
             row.update({
                 "generation_success": False, "error": str(e),
+                "frontend_output": getattr(adapter, "last_frontend_output", None),
                 "audio_duration_sec": None, "silence_ratio": None,
                 "effective_speech_sec": None, "rtf": None,
                 "audio_path": None, "decision": "fail_error",

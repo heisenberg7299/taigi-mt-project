@@ -15,10 +15,12 @@ omission_rate 和 intelligibility_score 兩欄留給人工補（透過驗證平�
 from tts_benchmark.runner import run_all
 from tts_benchmark.adapters.neurlang_vits import NeurlangVitsAdapter
 from tts_benchmark.adapters.speecht5_tailo import SpeechT5TailoAdapter
+from tts_benchmark.adapters.speecht5_tailo_via_taibun import SpeechT5TailoViaTaibunAdapter
 
 ADAPTERS = [
     NeurlangVitsAdapter(),
     SpeechT5TailoAdapter(),
+    SpeechT5TailoViaTaibunAdapter(),
     # 之後要加新候選（MERaLiON-OmniVoice-Hokkien-TTS等），在這裡加一行就好
 ]
 
