@@ -15,20 +15,39 @@ data/processed/verified.jsonl，作為訓練/評估用的第一批人工校對�
 import json
 import os
 import random
+import secrets
 from datetime import datetime, timezone
 
-from flask import Flask, request, redirect, url_for, render_template, jsonify
+from flask import Flask, request, redirect, url_for, render_template, jsonify, abort
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS = os.path.join(ROOT, "tests")
 REVIEW_DIR = os.path.join(ROOT, "data", "human_review")
 AUDIO_DIR = os.path.join(TESTS, "audio")
+ADMIN_KEY_PATH = os.path.join(REVIEW_DIR, ".admin_key")
 
 BATCH_SIZE = 10
 
 os.makedirs(REVIEW_DIR, exist_ok=True)
 
 app = Flask(__name__)
+
+
+def load_or_create_admin_key():
+    """/progress 只給開發者自己看，不能讓拿到公開連結的測試者也看到全體資料，
+    所以需要一組不放進版控、重啟伺服器也不會變的金鑰，存在 data/human_review/.admin_key
+    （這個資料夾整個都在 .gitignore 裡，不會被推上 GitHub）。"""
+    if os.path.exists(ADMIN_KEY_PATH):
+        with open(ADMIN_KEY_PATH) as f:
+            return f.read().strip()
+    key = secrets.token_urlsafe(16)
+    with open(ADMIN_KEY_PATH, "w") as f:
+        f.write(key)
+    return key
+
+
+ADMIN_KEY = load_or_create_admin_key()
+TOKENS_PATH = os.path.join(REVIEW_DIR, "_tokens.json")
 
 CATEGORY_LABELS = {
     "daily": "一般生活",
@@ -100,13 +119,40 @@ DATASET = load_merged_dataset()
 DATASET_BY_ID = {r["id"]: r for r in DATASET}
 
 
-def tester_review_path(tester):
-    safe = "".join(c for c in tester if c.isalnum() or c in ("-", "_")) or "anon"
+def load_tokens():
+    """token -> 顯示名稱 的對照表。存在本機、不進版控（整個 data/human_review/ 都在 .gitignore）。
+    測試者資料一律用不可猜的 token 當key，名字只拿來顯示，避免有人用猜的/知道的名字
+    就看到或接續別人的答案（例如打「正男」就能看到正男填過什麼）。"""
+    if not os.path.exists(TOKENS_PATH):
+        return {}
+    with open(TOKENS_PATH) as f:
+        return json.load(f)
+
+
+def save_tokens(tokens):
+    with open(TOKENS_PATH, "w") as f:
+        json.dump(tokens, f, ensure_ascii=False, indent=2)
+
+
+def create_tester_token(display_name):
+    tokens = load_tokens()
+    token = secrets.token_urlsafe(12)
+    tokens[token] = {"name": display_name, "created_at": datetime.now(timezone.utc).isoformat()}
+    save_tokens(tokens)
+    return token
+
+
+def tester_display_name(token):
+    return load_tokens().get(token, {}).get("name", "訪客")
+
+
+def tester_review_path(token):
+    safe = "".join(c for c in token if c.isalnum() or c in ("-", "_")) or "anon"
     return os.path.join(REVIEW_DIR, f"{safe}.jsonl")
 
 
-def load_tester_reviews(tester):
-    path = tester_review_path(tester)
+def load_tester_reviews(token):
+    path = tester_review_path(token)
     reviews = {}
     if os.path.exists(path):
         with open(path) as f:
@@ -119,56 +165,56 @@ def load_tester_reviews(tester):
     return reviews
 
 
-def append_review(tester, review_row):
-    path = tester_review_path(tester)
+def append_review(token, review_row):
+    path = tester_review_path(token)
     with open(path, "a") as f:
         f.write(json.dumps(review_row, ensure_ascii=False) + "\n")
 
 
-def batch_path(tester):
-    safe = "".join(c for c in tester if c.isalnum() or c in ("-", "_")) or "anon"
+def batch_path(token):
+    safe = "".join(c for c in token if c.isalnum() or c in ("-", "_")) or "anon"
     return os.path.join(REVIEW_DIR, f"{safe}_batch.json")
 
 
-def load_batch(tester):
-    path = batch_path(tester)
+def load_batch(token):
+    path = batch_path(token)
     if not os.path.exists(path):
         return None
     with open(path) as f:
         return json.load(f)
 
 
-def save_batch(tester, ids):
-    with open(batch_path(tester), "w") as f:
+def save_batch(token, ids):
+    with open(batch_path(token), "w") as f:
         json.dump({"ids": ids, "created_at": datetime.now(timezone.utc).isoformat()}, f)
 
 
-def remaining_pool(tester):
-    reviews = load_tester_reviews(tester)
+def remaining_pool(token):
+    reviews = load_tester_reviews(token)
     return [r["id"] for r in DATASET if r["id"] not in reviews]
 
 
-def get_or_init_batch(tester):
+def get_or_init_batch(token):
     """回傳目前這輪的10題id清單。第一次呼叫才隨機抽新的一輪，
     之後即使這輪已經全部做完，也不會自動換下一輪 —— 換輪要透過 /new_batch 明確觸發，
     這樣「一輪10題」才有明確的段落感，而不是無感一直做下去。"""
-    b = load_batch(tester)
+    b = load_batch(token)
     if b is not None:
         return b["ids"]
-    pool = remaining_pool(tester)
+    pool = remaining_pool(token)
     if not pool:
         return []
     ids = random.sample(pool, min(BATCH_SIZE, len(pool)))
-    save_batch(tester, ids)
+    save_batch(token, ids)
     return ids
 
 
-def start_new_batch(tester):
-    pool = remaining_pool(tester)
+def start_new_batch(token):
+    pool = remaining_pool(token)
     if not pool:
         return []
     ids = random.sample(pool, min(BATCH_SIZE, len(pool)))
-    save_batch(tester, ids)
+    save_batch(token, ids)
     return ids
 
 
@@ -179,29 +225,31 @@ def index():
 
 @app.route("/start", methods=["POST"])
 def start():
-    tester = request.form.get("tester", "").strip()
-    if not tester:
+    display_name = request.form.get("tester", "").strip()
+    if not display_name:
         return redirect(url_for("index"))
-    return redirect(url_for("review", tester=tester))
+    token = create_tester_token(display_name)
+    return redirect(url_for("review", t=token))
 
 
 @app.route("/review")
 def review():
-    tester = request.args.get("tester", "").strip()
-    if not tester:
+    token = request.args.get("t", "").strip()
+    if not token or token not in load_tokens():
         return redirect(url_for("index"))
+    tester_name = tester_display_name(token)
 
-    reviews = load_tester_reviews(tester)
-    batch_ids = get_or_init_batch(tester)
+    reviews = load_tester_reviews(token)
+    batch_ids = get_or_init_batch(token)
 
     if not batch_ids:
         return render_template(
-            "done.html", tester=tester, total=len(DATASET), done=len(reviews)
+            "done.html", tester=tester_name, total=len(DATASET), done=len(reviews)
         )
 
     unreviewed_in_batch = [i for i in batch_ids if i not in reviews]
     if not unreviewed_in_batch:
-        return redirect(url_for("batch_done", tester=tester))
+        return redirect(url_for("batch_done", t=token))
 
     requested_id = request.args.get("id")
     if requested_id and requested_id in batch_ids and requested_id in DATASET_BY_ID:
@@ -214,7 +262,8 @@ def review():
     batch_position = batch_ids.index(item_id) + 1
     return render_template(
         "review.html",
-        tester=tester,
+        tester=tester_name,
+        token=token,
         item=item,
         existing=existing,
         done=len(reviews),
@@ -227,14 +276,16 @@ def review():
 
 @app.route("/batch_done")
 def batch_done():
-    tester = request.args.get("tester", "").strip()
-    if not tester:
+    token = request.args.get("t", "").strip()
+    if not token or token not in load_tokens():
         return redirect(url_for("index"))
-    reviews = load_tester_reviews(tester)
-    remaining = len(remaining_pool(tester))
+    tester_name = tester_display_name(token)
+    reviews = load_tester_reviews(token)
+    remaining = len(remaining_pool(token))
     return render_template(
         "batch_done.html",
-        tester=tester,
+        tester=tester_name,
+        token=token,
         done=len(reviews),
         total=len(DATASET),
         remaining=remaining,
@@ -243,18 +294,18 @@ def batch_done():
 
 @app.route("/new_batch", methods=["POST"])
 def new_batch():
-    tester = request.form.get("tester", "").strip()
-    if not tester:
+    token = request.form.get("t", "").strip()
+    if not token or token not in load_tokens():
         return redirect(url_for("index"))
-    start_new_batch(tester)
-    return redirect(url_for("review", tester=tester))
+    start_new_batch(token)
+    return redirect(url_for("review", t=token))
 
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    tester = request.form.get("tester", "").strip()
+    token = request.form.get("t", "").strip()
     id_ = request.form.get("id", "").strip()
-    if not tester or id_ not in DATASET_BY_ID:
+    if not token or token not in load_tokens() or id_ not in DATASET_BY_ID:
         return redirect(url_for("index"))
 
     item = DATASET_BY_ID[id_]
@@ -266,7 +317,7 @@ def submit():
 
     row = {
         "id": id_,
-        "tester": tester,
+        "tester": tester_display_name(token),
         "zh": item["zh"],
         "category": item["category"],
         "candidate": item["candidate"],
@@ -277,26 +328,30 @@ def submit():
         "note": note or None,
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
     }
-    append_review(tester, row)
-    return redirect(url_for("review", tester=tester))
+    append_review(token, row)
+    return redirect(url_for("review", t=token))
 
 
 @app.route("/progress")
 def progress():
+    if request.args.get("key") != ADMIN_KEY:
+        abort(404)
+    tokens = load_tokens()
     testers = []
     if os.path.isdir(REVIEW_DIR):
         for fname in sorted(os.listdir(REVIEW_DIR)):
             if not fname.endswith(".jsonl"):
                 continue
-            tester = fname[:-6]
-            reviews = load_tester_reviews(tester)
+            key = fname[:-6]
+            display_name = tokens.get(key, {}).get("name", key)
+            reviews = load_tester_reviews(key)
             verdict_counts = {"correct": 0, "needs_edit": 0, "wrong": 0}
             for r in reviews.values():
                 v = r.get("verdict")
                 if v in verdict_counts:
                     verdict_counts[v] += 1
             testers.append({
-                "tester": tester,
+                "tester": display_name,
                 "done": len(reviews),
                 "total": len(DATASET),
                 "verdict_counts": verdict_counts,
@@ -315,4 +370,5 @@ def audio(id_):
 
 if __name__ == "__main__":
     print(f"已載入 {len(DATASET)} 句測試資料")
+    print(f"開發者專用進度頁： http://127.0.0.1:5001/progress?key={ADMIN_KEY}")
     app.run(host="0.0.0.0", port=5001, debug=False)

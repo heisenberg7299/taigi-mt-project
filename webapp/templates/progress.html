@@ -7,7 +7,7 @@
     <tr><th>測試者</th><th>完成</th><th>✅正確</th><th>✏️需修改</th><th>❌錯誤</th></tr>
     {% for t in testers %}
     <tr>
-      <td><a href="/review?tester={{ t.tester }}">{{ t.tester }}</a></td>
+      <td>{{ t.tester }}</td>
       <td>{{ t.done }} / {{ t.total }}</td>
       <td>{{ t.verdict_counts.correct }}</td>
       <td>{{ t.verdict_counts.needs_edit }}</td>

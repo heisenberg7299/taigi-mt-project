@@ -3,8 +3,10 @@
 data/processed/verified.jsonl，格式符合 data/schema.md。
 
 規則：
-- verdict == "correct" 或 "needs_edit" 且有填 corrected_nan_han -> 收進去，verified=true
-- verdict == "wrong" 且沒有修改版本 -> 不收（沒有可用答案）
+- 只要有填 corrected_nan_han 就收進去，不管 verdict 是 correct/needs_edit/wrong
+  （verdict=="wrong" 但測試者花時間重寫了正確答案，這正是最有價值的校正資料，
+  不能因為原始候選被判「錯」就整筆丟掉）
+- verdict 保留在輸出的 review_verdicts 欄位當品質參考，不作為是否收錄的篩選條件
 - 同一句如果有多位測試者，且答案不一致 -> 全部列出，標記 needs_review，不自動選一個
 
 執行：python scripts/export_verified.py
@@ -40,10 +42,7 @@ def main():
 
     with open(OUT, "w") as fout:
         for id_, reviews in sorted(by_id.items()):
-            usable = [
-                r for r in reviews
-                if r.get("verdict") in ("correct", "needs_edit") and r.get("corrected_nan_han")
-            ]
+            usable = [r for r in reviews if r.get("corrected_nan_han")]
             if not usable:
                 n_skipped += 1
                 continue
@@ -60,6 +59,7 @@ def main():
                 "source": "human_review",
                 "license": "project_internal",
                 "verified": True,
+                "review_verdicts": [r.get("verdict") for r in usable],
             }
             if len(answers) > 1:
                 row["needs_review"] = True

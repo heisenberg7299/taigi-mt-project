@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="progress-bar"><div style="width: {{ (batch_position / batch_size * 100) | round(1) }}%"></div></div>
-<p class="muted">這一輪第 {{ batch_position }} / {{ batch_size }} 題 · 總共已完成 {{ done }} / {{ total }} 句（測試者：{{ tester }}） · <a href="/progress">整體進度</a></p>
+<p class="muted">這一輪第 {{ batch_position }} / {{ batch_size }} 題 · 你總共已完成 {{ done }} / {{ total }} 句（測試者：{{ tester }}）</p>
+<p class="muted">💡 這個網址是你專屬的，建議加入書籤，之後想繼續可以直接用這個網址回來。</p>
 
 <div class="card">
   <span class="badge">{{ item.category_label }}</span>
@@ -28,7 +29,7 @@
 </div>
 
 <form action="/submit" method="post" class="card">
-  <input type="hidden" name="tester" value="{{ tester }}">
+  <input type="hidden" name="t" value="{{ token }}">
   <input type="hidden" name="id" value="{{ item.id }}">
 
   <div class="field">
@@ -73,8 +74,8 @@
 
 <p class="muted">
   {% set idx = all_ids.index(item.id) %}
-  {% if idx > 0 %}<a href="/review?tester={{ tester }}&id={{ all_ids[idx-1] }}">← 上一句</a>{% endif %}
+  {% if idx > 0 %}<a href="/review?t={{ token }}&id={{ all_ids[idx-1] }}">← 上一句</a>{% endif %}
   &nbsp;|&nbsp; {{ item.id }} &nbsp;|&nbsp;
-  {% if idx < all_ids|length - 1 %}<a href="/review?tester={{ tester }}&id={{ all_ids[idx+1] }}">下一句 →</a>{% endif %}
+  {% if idx < all_ids|length - 1 %}<a href="/review?t={{ token }}&id={{ all_ids[idx+1] }}">下一句 →</a>{% endif %}
 </p>
 {% endblock %}
