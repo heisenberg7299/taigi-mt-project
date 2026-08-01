@@ -128,3 +128,4 @@ cd webapp && source ../venv/bin/activate && python3 app.py
 - [x] 數字/病房號/時間是否一致 — `check_number_consistency`（規則：病房號/電話逐位數唸，其他整數唸）
 - [x] 陷阱字：走(跑)/行(走) — `check_trap_words`，目前只收錄這一組有把握的，套用在 Baseline 2 上 0/200 誤觸發（代表這個模型已經處理對了，這層是給未來其他模型的防護網）。其他待發現的語意反轉字，計畫靠驗證平台測試者的備註持續補充，不要自己亂猜
 - [x] 中英台混合句是否崩潰 — 已納入200句測試集 code_mixing 類別，Baseline 2 抽樣看起來沒有崩潰
+- [x] 主力TTS未知字元靜默丟棄（OOV audit）— `check_unconverted_characters` + `scripts/check_tts_oov.py`。實測發現pygoruut碰到生僻字（如「𧙕」）會靜默丟棄整個字、不報錯不警示（比整句失敗更危險，因為聽起來還是正常一句話）。**掃200句真實候選：0句有整字被丟棄（好消息），但168/200句（84%）有IPA音標符號本身缺vocab**（送氣ʰ、鼻化母音ãĩũẽõ）——不是漏字，是這些音素特徵被系統性簡化，可能唸不準，嚴重程度待母語者驗證確認
