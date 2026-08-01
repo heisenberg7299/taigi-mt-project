@@ -111,16 +111,21 @@ taigi-mt-project/
 
 ## 母語者驗證平台
 
-`webapp/app.py`（Flask），本機跑：
-```
-cd webapp && source ../venv/bin/activate && python3 app.py
-```
-瀏覽器開 http://127.0.0.1:5001（同網段其他人可用 http://<這台Mac的區網IP>:5001）。
+**2026-08-01起改用靜態版，正式上線網址：https://heisenberg7299.github.io/taigi-verify/**
+（獨立repo `taigi-verify`，GitHub Pages + Firebase Firestore，不依賴這台Mac開機/網路，
+沿用`english-vocab-app`的同一個Firebase專案，資料存在獨立的`taigi_reviews`/`taigi_tokens`
+collection，不會跟單字app的資料混）。開發者進度頁：
+https://heisenberg7299.github.io/taigi-verify/progress.html （用email/password登入）。
+
+舊版 `webapp/app.py`（Flask，本機+cloudflared tunnel）累積的62筆真實回覆（5位測試者：
+鐘/Angel/Yiching/正男/yuki）已用 `scripts/migrate_to_firestore.py` 全部遷移進新系統
+（去重複後59筆不重複句子，同一句測過兩次取最新那筆）。Flask版本身還留著沒刪，
+之後如果新版證實穩定，可以考慮把 `webapp/`、`scripts/tunnel_watchdog.sh` 這些檔案
+標記淘汰。
+
+舊版說明（保留供參考）：`cd webapp && source ../venv/bin/activate && python3 app.py`，
 測試者輸入名字後，逐句看「中文原句 / Taigi-Llama候選台語翻譯 / 語音播放 / 安全檢查警示標籤」，
 標記正確/需修改/錯誤，可直接編輯出正確版本，附流暢度與保真度評分。
-結果存在 `data/human_review/{tester}.jsonl`，之後用 `scripts/export_verified.py`（待建）匯總進
-`data/processed/verified.jsonl`，成為第一批人工校對過的訓練/評估語料。
-`/progress` 頁面可看所有測試者的完成度和判定分布。
 
 ## 安全檢查清單（醫療情境必測）
 
