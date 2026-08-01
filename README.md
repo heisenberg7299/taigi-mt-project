@@ -36,7 +36,7 @@ python3 app.py
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install flask jieba huggingface_hub coqui-tts[codec] "transformers<5" "setuptools<81"
+pip install flask jieba huggingface_hub coqui-tts[codec] "transformers<5" "setuptools<81" sentencepiece datasets taibun
 
 python3 scripts/download_datasets.py      # 下載教育部辭典 / iCorpus-100 / TaigiSpeech
 python3 scripts/build_test_set.py         # 產生 200 句測試集

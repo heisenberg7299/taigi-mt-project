@@ -15,7 +15,7 @@
 | `neurlang/coqui-vits-suisiann-minnan-hokkien` | **已驗證可用（目前主力）** | CC-BY-SA-4.0 | VITS，CPU RTF~0.11-0.13 | Hanji（漢字，內建pygoruut自動轉IPA） | None | 已產生200句候選音檔，正在收母語者回饋 |
 | MediaTek BreezyVoice-Taigi | **查無公開權重，無法實測** | 論文未揭露 | CosyVoice2微調，~10,000小時合成資料 | 不明（論文未寫） | 不明 | 論文（[arXiv:2603.19259](https://arxiv.org/html/2603.19259)）有報告數字但 HuggingFace 上找不到對應模型檔；已搜尋 MediaTek-Research 全部27個模型跟關鍵字「Taigi」「BreezyVoice」都沒有這個repo。**重要發現**：論文自報的「台語發音準確率只有59.2%」——連 MediaTek 專門投入的模型都只有六成不到的道地發音率，這代表台語TTS本身難度很高，不是我們資源不夠的問題 |
 | [MERaLiON-OmniVoice-Hokkien-TTS](https://huggingface.co/MERaLiON/MERaLiON-OmniVoice-Hokkien-TTS) | 可下載，未實測 | MERaLiON-3-Public-Licence（自訂條款，需另外詳讀是否允許研究/商用） | 0.8B參數，~2.7GB，支援聲音克隆 | 待確認（`generate(text=..., language="nan")`，文件沒明講吃漢字還是羅馬字） | 待實測後才知道 | **要注意的是這是新加坡福建話（Singapore Hokkien），不是台灣台語**——兩者同源但用詞、部分腔調有差異，混用可能被台灣母語者聽出「怪腔怪調」。自報指標：WER 0.33（不算低）、自然度8.4/10、DNSMOS 3.13/5 |
-| Curiousfox / wenxinkoh06 的 `speecht5_tailo-hokkien` 系列 | **已實測，確認不能直接用（見下方細節）** | MIT | SpeechT5微調（0.1B），體積小 | Tâi-lô羅馬字 / 英文（漢字幾乎完全失效，見下） | Hanji→Tâi-lô G2P（目前專案沒有） | 命名用「tailo」明確針對台灣台語，授權最寬鬆 |
+| Curiousfox / wenxinkoh06 的 `speecht5_tailo-hokkien` 系列 | **Conditional fallback — frontend prototype available**（見下方 taibun 前端測試） | MIT（模型）+ MIT/CC-BY-SA-4.0（taibun） | SpeechT5微調（0.1B），體積小 | Tâi-lô羅馬字（漢字直接輸入會失敗，需前端轉換） | `taibun` Hanji→Tâi-lô（已接上，見下方） | 命名用「tailo」明確針對台灣台語，授權最寬鬆 |
 | `chen778560489/coqui-vits-suisiann-minnan-hokkien` | 略過 | 同neurlang | - | 同neurlang | None | 看起來是 neurlang 模型的 fork/鏡像，非獨立模型，跳過 |
 
 ## `speecht5_tailo-hokkien`（wenxinkoh06/ver1.0.d）實測結果（2026-08-01）
@@ -97,12 +97,25 @@ Decision:
 - Retain only as a possible future Tâi-lô-input baseline.
 ```
 
-## 建議下一步優先順序（更新：改用淘汰漏斗式排序，不要在SpeechT5繼續投入）
+**Update（2026-08-01，同日稍晚）**：接上 `taibun`（公開 Hanji→Tâi-lô 套件）當
+frontend 後，原本判定 fail 的漢字輸入全部技術性成功（見下方「Hanji→Tâi-lô
+Frontend」章節），狀態改為：
 
-1. **優先測能直接吃台語漢字的模型** — 避免多一層G2P依賴，`neurlang` VITS目前是唯一
-   一個符合這個條件並已驗證的候選
+```text
+Status (updated): Conditional fallback — frontend prototype available
+Frontend: taibun (single tool, no additional G2P layer stacked)
+Caveat: Only feasibility confirmed (audio is generated, silence/RTF normal).
+        Phonetic correctness of taibun's Tâi-lô output NOT yet verified by
+        a native speaker. Do not treat as production-ready.
+```
+
+## 建議下一步優先順序（2026-08-01 taibun frontend測完後更新）
+
+1. **人工評分 `speecht5_tailo_via_taibun` 這6句** — 透過驗證平台讓母語者聽，補
+   `omission_rate`／`intelligibility_score`，這才是決定taibun路線值不值得繼續
+   投入（Phase 2/3）的關鍵資料，不是靠客觀指標自己判斷
 2. **MERaLiON-OmniVoice-Hokkien-TTS** — 先確認它實際吃的是漢字還是羅馬字（目前文件
-   沒寫清楚），是漢字才值得深測；是羅馬字則跟speecht5同樣先擱置G2P投入
+   沒寫清楚），是漢字才值得深測；是羅馬字可以直接套用同一個taibun frontend試試看
 3. **CosyVoice／Qwen系列重新實測** — 用同一批漢字、Tâi-lô、英文、中英台混合輸入
    統一測過一輪，不要只憑今天稍早那次「無台語支援」的初步結論就完全排除，換句話說
    要用跟這次一樣的客觀量測方法（能量/靜音比例）重新確認，不能只憑主觀聽感
@@ -140,6 +153,50 @@ Decision:
 單獨測試的結論一致。新發現：speecht5的RTF比neurlang慢3-7倍——雖然還沒到不能用
 的程度，但這也是選型時的額外扣分項，一併記錄起來，之後每個新候選都會有這個欄位
 可以直接比較。
+
+## Hanji→Tâi-lô Frontend：接上 taibun（2026-08-01）
+
+原本判斷「要用speecht5_tailo就得先建G2P，先擱置」。查證後發現已經有現成公開工具
+`taibun`（PyPI，程式碼MIT授權，內建詞典CC-BY-SA-4.0，支援Tâi-lô/POJ/TLPA/IPA輸出，
+含斷詞器），不用從零做，值得先測這條路能不能直接打通。
+
+**刻意只接一個G2P工具**（taibun），不同時疊教育部辭典覆寫或臺灣言語工具正規化——
+先確認單一工具夠不夠用，避免多個轉換來源同時作用時，出錯了搞不清楚是哪一層的問題。
+不夠用再考慮加辭典覆寫當第二層（分階段投入，不要一次全做）。
+
+### Phase 1：可行性測試（已完成）
+
+新增 `SpeechT5TailoViaTaibunAdapter`（`scripts/tts_benchmark/adapters/speecht5_tailo_via_taibun.py`），
+組合方式：`台語漢字 → taibun.Converter(system="Tailo") → speecht5_tailo-hokkien`。
+跑同一個benchmark runner，測 han/num/neg 三類（原本speecht5完全無法處理的漢字輸入）：
+
+| id | 原文 | taibun轉換結果 | silence_ratio | rtf |
+|---|---|---|---|---|
+| han_01 | 我需要啉水。 | Guá su-iàu lim tsuí. | 48% | 0.188 |
+| han_02 | 請共我叫護理師。 | Tshiánn kā guá kiò hōo-lí-su. | 45% | 0.175 |
+| num_01 | 請共我叫三號病房的護理師。 | Tshiánn kā guá kiò sann hō pēnn-pâng ê hōo-lí-su. | 46% | 0.179 |
+| num_02 | 我這馬血壓一二零，體溫三十六度五。 | Guá tsit-má hueh-ap tsi̍t jī lîng, thé-un sann-tsa̍p-la̍k tōo gōo. | 44% | 0.186 |
+| neg_01 | 我無胸疼，煩勞你共我確認一下這禮拜愛食的藥仔有偌濟種。 | Guá bô hing thiànn, huân lô lí kā guá khak jīn tsi̍t-ē tse lé-pài ài tsia̍h ê io̍h-á ū guā-tsē tsíng. | 43% | 0.19 |
+| neg_02 | 我猶未做檢查，毋過我這幾工攏無食藥仔，會使先毋通叫醫生無？ | Guá iáu-buē tsò kiám-tsa, m̄-koh guá tse kuí kong láng bô tsia̍h-io̍h-á, ē-sái sing m̄-thang kiò i-sing bô? | 44% | 0.195 |
+
+**結果：6句全部成功，靜音比例43-48%，落在neurlang（46-53%）跟原生tailo輸入
+（50-54%）的同一個正常範圍內，沒有一句觸發`fail_silence`門檻。** RTF約0.18-0.20，
+比稍早單獨測試時的0.20-0.68更快更穩定（推測前次偏慢是模型剛載入的暖機效應）。
+
+技術結論：**taibun frontend prototype有效，`speecht5_tailo-hokkien`從
+`Deferred`改列 `Conditional fallback — frontend prototype available`。**
+
+### 這只證明「技術可行」，不等於「發音正確」——Phase 2還沒做
+
+客觀指標（靜音比例、RTF）只能證明「這個pipeline有正常產生語音」，不能證明
+taibun產生的Tâi-lô本身選字選音對不對——一字多音、文白異讀這些問題，taibun
+是規則/詞典導向的轉換工具，不保證每句都對，需要母語者比對才能確認。
+
+Phase 2（100句 gold-standard Hanji→Tâi-lô 驗證集，人工校正 vs taibun自動輸出
+比對音節/聲調錯誤率）跟 Phase 3（醫療詞彙優先查表覆寫，例如用教育部辭典的
+「護理師」「血壓」等詞條讀音蓋過taibun的預設猜測）都還沒做，先不投入，等
+Phase 1 這批音檔透過驗證平台收到人工可懂度評分、確認taibun路線真的值得投入
+之後再做。
 
 ## 系統設計原則（這次的實測讓這件事變得明確）
 
