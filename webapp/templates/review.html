@@ -2,7 +2,9 @@
 {% block content %}
 <div class="progress-bar"><div style="width: {{ (batch_position / batch_size * 100) | round(1) }}%"></div></div>
 <p class="muted">這一輪第 {{ batch_position }} / {{ batch_size }} 題 · 你總共已完成 {{ done }} / {{ total }} 句（測試者：{{ tester }}）</p>
-<p class="muted">💡 這個網址是你專屬的，建議加入書籤，之後想繼續可以直接用這個網址回來。</p>
+<p class="muted">💡 這台裝置/瀏覽器會自動記得你的進度，關掉視窗再回來、或重新打開連結都沒關係，
+不用重新輸入名字。如果想換別的裝置或瀏覽器繼續，才需要把這個網址存起來帶過去
+（重新輸入一樣的名字在新裝置上不會接回同一份進度，會變成新的一輪）。</p>
 
 <div class="card">
   <span class="badge">{{ item.category_label }}</span>

@@ -18,7 +18,7 @@ import random
 import secrets
 from datetime import datetime, timezone
 
-from flask import Flask, request, redirect, url_for, render_template, jsonify, abort
+from flask import Flask, request, redirect, url_for, render_template, jsonify, abort, make_response
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS = os.path.join(ROOT, "tests")
@@ -48,6 +48,12 @@ def load_or_create_admin_key():
 
 ADMIN_KEY = load_or_create_admin_key()
 TOKENS_PATH = os.path.join(REVIEW_DIR, "_tokens.json")
+
+COOKIE_NAME = "taigi_test_token"
+COOKIE_MAX_AGE = 60 * 60 * 24 * 180  # 180天。有測試者反應關掉視窗再回來進度就不見了——
+# 原因是token只存在網址裡，沒書籤就等於沒了。改成同時存一份cookie在瀏覽器，
+# 同一台裝置/瀏覽器之後不管是打開首頁還是重新填名字，都能自動接回原本的進度，
+# 不用測試者自己記得收藏連結。
 
 CATEGORY_LABELS = {
     "daily": "一般生活",
@@ -219,24 +225,51 @@ def start_new_batch(token):
     return ids
 
 
+def resolve_token(candidate):
+    """優先用網址/表單帶的token，沒有或無效就退回瀏覽器cookie裡存的那組。"""
+    tokens = load_tokens()
+    if candidate and candidate in tokens:
+        return candidate
+    cookie_token = request.cookies.get(COOKIE_NAME, "")
+    if cookie_token and cookie_token in tokens:
+        return cookie_token
+    return None
+
+
+def set_token_cookie(response, token):
+    response.set_cookie(
+        COOKIE_NAME, token, max_age=COOKIE_MAX_AGE, httponly=True, samesite="Lax"
+    )
+    return response
+
+
 @app.route("/")
 def index():
+    cookie_token = request.cookies.get(COOKIE_NAME, "")
+    if cookie_token and cookie_token in load_tokens():
+        return redirect(url_for("review", t=cookie_token))
     return render_template("index.html")
 
 
 @app.route("/start", methods=["POST"])
 def start():
+    cookie_token = request.cookies.get(COOKIE_NAME, "")
+    if cookie_token and cookie_token in load_tokens():
+        # 這台裝置已經有進行中的session了，不要因為又填了一次名字就開新的、
+        # 讓舊進度變成看不到的孤兒資料。
+        return redirect(url_for("review", t=cookie_token))
     display_name = request.form.get("tester", "").strip()
     if not display_name:
         return redirect(url_for("index"))
     token = create_tester_token(display_name)
-    return redirect(url_for("review", t=token))
+    resp = redirect(url_for("review", t=token))
+    return set_token_cookie(resp, token)
 
 
 @app.route("/review")
 def review():
-    token = request.args.get("t", "").strip()
-    if not token or token not in load_tokens():
+    token = resolve_token(request.args.get("t", "").strip())
+    if not token:
         return redirect(url_for("index"))
     tester_name = tester_display_name(token)
 
@@ -244,13 +277,15 @@ def review():
     batch_ids = get_or_init_batch(token)
 
     if not batch_ids:
-        return render_template(
+        resp = make_response(render_template(
             "done.html", tester=tester_name, total=len(DATASET), done=len(reviews)
-        )
+        ))
+        return set_token_cookie(resp, token)
 
     unreviewed_in_batch = [i for i in batch_ids if i not in reviews]
     if not unreviewed_in_batch:
-        return redirect(url_for("batch_done", t=token))
+        resp = redirect(url_for("batch_done", t=token))
+        return set_token_cookie(resp, token)
 
     requested_id = request.args.get("id")
     if requested_id and requested_id in batch_ids and requested_id in DATASET_BY_ID:
@@ -261,7 +296,7 @@ def review():
     item = DATASET_BY_ID[item_id]
     existing = reviews.get(item["id"])
     batch_position = batch_ids.index(item_id) + 1
-    return render_template(
+    resp = make_response(render_template(
         "review.html",
         tester=tester_name,
         token=token,
@@ -272,41 +307,44 @@ def review():
         all_ids=batch_ids,
         batch_position=batch_position,
         batch_size=len(batch_ids),
-    )
+    ))
+    return set_token_cookie(resp, token)
 
 
 @app.route("/batch_done")
 def batch_done():
-    token = request.args.get("t", "").strip()
-    if not token or token not in load_tokens():
+    token = resolve_token(request.args.get("t", "").strip())
+    if not token:
         return redirect(url_for("index"))
     tester_name = tester_display_name(token)
     reviews = load_tester_reviews(token)
     remaining = len(remaining_pool(token))
-    return render_template(
+    resp = make_response(render_template(
         "batch_done.html",
         tester=tester_name,
         token=token,
         done=len(reviews),
         total=len(DATASET),
         remaining=remaining,
-    )
+    ))
+    return set_token_cookie(resp, token)
 
 
 @app.route("/new_batch", methods=["POST"])
 def new_batch():
-    token = request.form.get("t", "").strip()
-    if not token or token not in load_tokens():
+    token = resolve_token(request.form.get("t", "").strip())
+    if not token:
         return redirect(url_for("index"))
     start_new_batch(token)
-    return redirect(url_for("review", t=token))
+    resp = redirect(url_for("review", t=token))
+    return set_token_cookie(resp, token)
 
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    token = request.form.get("t", "").strip()
+    token = resolve_token(request.form.get("t", "").strip())
     id_ = request.form.get("id", "").strip()
-    if not token or token not in load_tokens() or id_ not in DATASET_BY_ID:
+    if not token or id_ not in DATASET_BY_ID:
         return redirect(url_for("index"))
 
     item = DATASET_BY_ID[id_]
@@ -330,7 +368,8 @@ def submit():
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
     }
     append_review(token, row)
-    return redirect(url_for("review", t=token))
+    resp = redirect(url_for("review", t=token))
+    return set_token_cookie(resp, token)
 
 
 @app.route("/progress")
