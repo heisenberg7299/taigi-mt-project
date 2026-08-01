@@ -44,6 +44,7 @@ python3 scripts/run_dict_baseline.py      # baseline 1：辭典最長詞匹配
 python3 scripts/run_taigi_llama_baseline.py  # baseline 2：需先用 Ollama 跑 Taigi-Llama-2-Translator-7B GGUF
 python3 scripts/run_stage3_checks.py      # 安全檢查層
 python3 scripts/synthesize_audio.py       # 合成候選翻譯的語音（需要 models/neurlang-vits-suisiann/ 模型權重，另外下載，見 PLAN.md）
+python3 scripts/run_tts_benchmark.py      # 階段4：統一TTS候選跑分（見 scripts/tts_benchmark/，新增候選寫個adapter就好）
 ```
 
 模型權重（`models/`）、原始資料集下載（`data/raw/`）與合成音檔（`tests/audio/`）不進版控，
