@@ -15,20 +15,38 @@ data/processed/verified.jsonl，作為訓練/評估用的第一批人工校對�
 import json
 import os
 import random
+import secrets
 from datetime import datetime, timezone
 
-from flask import Flask, request, redirect, url_for, render_template, jsonify
+from flask import Flask, request, redirect, url_for, render_template, jsonify, abort
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS = os.path.join(ROOT, "tests")
 REVIEW_DIR = os.path.join(ROOT, "data", "human_review")
 AUDIO_DIR = os.path.join(TESTS, "audio")
+ADMIN_KEY_PATH = os.path.join(REVIEW_DIR, ".admin_key")
 
 BATCH_SIZE = 10
 
 os.makedirs(REVIEW_DIR, exist_ok=True)
 
 app = Flask(__name__)
+
+
+def load_or_create_admin_key():
+    """/progress 只給開發者自己看，不能讓拿到公開連結的測試者也看到全體資料，
+    所以需要一組不放進版控、重啟伺服器也不會變的金鑰，存在 data/human_review/.admin_key
+    （這個資料夾整個都在 .gitignore 裡，不會被推上 GitHub）。"""
+    if os.path.exists(ADMIN_KEY_PATH):
+        with open(ADMIN_KEY_PATH) as f:
+            return f.read().strip()
+    key = secrets.token_urlsafe(16)
+    with open(ADMIN_KEY_PATH, "w") as f:
+        f.write(key)
+    return key
+
+
+ADMIN_KEY = load_or_create_admin_key()
 
 CATEGORY_LABELS = {
     "daily": "一般生活",
@@ -283,6 +301,8 @@ def submit():
 
 @app.route("/progress")
 def progress():
+    if request.args.get("key") != ADMIN_KEY:
+        abort(404)
     testers = []
     if os.path.isdir(REVIEW_DIR):
         for fname in sorted(os.listdir(REVIEW_DIR)):
@@ -315,4 +335,5 @@ def audio(id_):
 
 if __name__ == "__main__":
     print(f"已載入 {len(DATASET)} 句測試資料")
+    print(f"開發者專用進度頁： http://127.0.0.1:5001/progress?key={ADMIN_KEY}")
     app.run(host="0.0.0.0", port=5001, debug=False)

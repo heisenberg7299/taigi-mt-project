@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="progress-bar"><div style="width: {{ (batch_position / batch_size * 100) | round(1) }}%"></div></div>
-<p class="muted">這一輪第 {{ batch_position }} / {{ batch_size }} 題 · 總共已完成 {{ done }} / {{ total }} 句（測試者：{{ tester }}） · <a href="/progress">整體進度</a></p>
+<p class="muted">這一輪第 {{ batch_position }} / {{ batch_size }} 題 · 你總共已完成 {{ done }} / {{ total }} 句（測試者：{{ tester }}）</p>
 
 <div class="card">
   <span class="badge">{{ item.category_label }}</span>
