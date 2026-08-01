@@ -198,6 +198,25 @@ Phase 2（100句 gold-standard Hanji→Tâi-lô 驗證集，人工校正 vs taib
 Phase 1 這批音檔透過驗證平台收到人工可懂度評分、確認taibun路線真的值得投入
 之後再做。
 
+### 開發者快聽（2026-08-01）：「有進步，但還是差一點味道」
+
+開發者自己（非母語者，僅供初步參考，不能取代正式的母語者驗證）用Finder直接
+對照聽了這6句 `speecht5_tailo_via_taibun` vs `neurlang-vits-suisiann` 的同句版本，
+結論：**taibun frontend確實讓speecht5從完全發不出聲進步到聽得出是在講話，
+但整體自然度、腔調的「台語味」還是不如neurlang這個目前的主力模型**。
+
+這跟客觀指標（靜音比例、RTF）測不出來的東西吻合猜測：
+- speecht5_tailo checkpoint本身規模小（0.1B）、社群熱度低，訓練資料量可能不足
+- 目前用的是`cmu-arctic-xvectors`裡隨便挑的英語語者embedding當佔位（見前面
+  「怎麼測的」章節），音色/韻律本來就不是為台語調的，這點neurlang（有自己
+  訓練過的台語語者）天生佔優勢
+
+**初步結論（待更嚴謹的母語者驗證確認）**：`speecht5_tailo_via_taibun`目前不足以
+取代neurlang，維持`Conditional fallback`（備援選項）而非升級成主力候選。
+是否值得投入Phase 2/3（改善G2P、換一個真正的台語語者embedding）取決於之後
+有沒有更急迫的理由需要第二個TTS選項——目前neurlang還沒有已知的重大缺陷，
+優先度不高。
+
 ## 系統設計原則（這次的實測讓這件事變得明確）
 
 > **TTS模型的輸入文字體系必須和上游翻譯輸出一致；否則模型音質再好，也會多出一個
