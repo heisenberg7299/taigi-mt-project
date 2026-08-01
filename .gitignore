@@ -16,6 +16,8 @@ reports/feedback_summary.md
 
 # Ollama / TTS 本機執行期產生的檔案
 *.wav
+# docs/audio/ 是驗證平台(GitHub Pages)要發布的靜態音檔，例外要進版控
+!docs/audio/*.wav
 
 # cloudflared tunnel 執行期產生的檔案（網址每次重啟會變，不該寫死進版控）
 CURRENT_TUNNEL_URL.txt

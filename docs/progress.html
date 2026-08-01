@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>整體進度（開發者專用）</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<h1>整體進度（開發者專用）</h1>
+
+<section id="login-section">
+  <div class="card">
+    <p class="muted">用你的Firebase帳號（email/password）登入才看得到——測試者拿到的連結不會顯示這個頁面的入口，就算誤點進來也需要登入。</p>
+    <form id="login-form">
+      <div class="field">
+        <label class="field-label" for="email">Email</label>
+        <input type="email" id="email" required>
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">密碼</label>
+        <input type="password" id="password" required>
+      </div>
+      <button type="submit">登入</button>
+    </form>
+    <p id="login-error" class="muted"></p>
+  </div>
+</section>
+
+<section id="progress-section" class="hidden">
+  <p class="muted">測試集共 <span id="total-count"></span> 句</p>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>測試者</th><th>完成</th><th>✅正確</th><th>✏️需修改</th><th>❌錯誤</th></tr>
+      </thead>
+      <tbody id="progress-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer><a href="./index.html">回首頁</a></footer>
+
+<script type="module">
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, collectionGroup, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loginSection = document.getElementById("login-section");
+const progressSection = document.getElementById("progress-section");
+
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    document.getElementById("login-error").textContent = "登入失敗：" + err.message;
+  }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (user && !user.isAnonymous) {
+    loginSection.classList.add("hidden");
+    progressSection.classList.remove("hidden");
+    await renderProgress();
+  } else {
+    loginSection.classList.remove("hidden");
+    progressSection.classList.add("hidden");
+  }
+});
+
+async function renderProgress() {
+  const dataRes = await fetch("./data.json");
+  const data = await dataRes.json();
+  document.getElementById("total-count").textContent = data.length;
+
+  const tokensSnap = await getDocs(collection(db, "taigi_tokens"));
+  const tokenToName = {};
+  tokensSnap.forEach((d) => { tokenToName[d.data().token] = d.id; });
+
+  const itemsSnap = await getDocs(collectionGroup(db, "items"));
+  const byToken = {};
+  itemsSnap.forEach((d) => {
+    const token = d.ref.parent.parent.id;
+    byToken[token] = byToken[token] || [];
+    byToken[token].push(d.data());
+  });
+
+  const tbody = document.getElementById("progress-tbody");
+  tbody.innerHTML = "";
+  const rows = Object.entries(byToken).map(([token, items]) => {
+    const name = tokenToName[token] || token;
+    const counts = { correct: 0, needs_edit: 0, wrong: 0 };
+    for (const it of items) {
+      if (counts[it.verdict] !== undefined) counts[it.verdict]++;
+    }
+    return { name, done: items.length, counts };
+  }).sort((a, b) => b.done - a.done);
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="muted">還沒有人開始</td></tr>`;
+    return;
+  }
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.name}</td><td>${r.done} / ${data.length}</td>
+      <td>${r.counts.correct}</td><td>${r.counts.needs_edit}</td><td>${r.counts.wrong}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+</script>
+</body>
+</html>
