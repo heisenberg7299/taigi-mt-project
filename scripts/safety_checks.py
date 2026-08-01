@@ -126,6 +126,34 @@ def check_trap_words(zh: str, nan: str):
     return True, None
 
 
+# ---------- 6. 主力TTS未知字元靜默丟棄檢查（OOV audit） ----------
+# 跟前面5層不一樣：這層需要載入neurlang VITS模型的tokenizer才能跑，不是純文字檢查，
+# 所以刻意不放進 ALL_CHECKS（那個list假設每個check都是輕量、不需要額外重物件）。
+# 用法見 scripts/check_tts_oov.py，那支腳本會載入一次tokenizer後重複呼叫這個函式。
+#
+# 背景：實測發現 neurlang 內部的 pygoruut phonemizer 碰到詞彙表沒有的字元
+# （生僻字、真正的OOV），不會報錯、不會整句失敗，而是被
+# TTS.tts.utils.text.tokenizer.TTSTokenizer.encode() 靜默丟棄——這個字就是
+# 不會被念出來，沒有任何警示會傳到使用者這邊。這比「整句念不出來」更危險，
+# 因為表面上聽起來還是一句正常的話，只是漏了一個字（可能是藥名、症狀、地名）。
+
+PUNCTUATION_SAFE_TO_DROP = set("。，、；：？！「」『』（）,.;:!?()— -\n\t ")
+
+
+def check_unconverted_characters(nan: str, tokenizer):
+    """tokenizer 必須是已經載入好的 TTS.tts.utils.text.tokenizer.TTSTokenizer
+    （例如 Synthesizer(...).tts_model.tokenizer），呼叫方負責只載入一次、重複使用，
+    不要每句話都重新載入整個VITS模型。"""
+    if nan is None:
+        return False, "無翻譯結果"
+    tokenizer.not_found_characters = []
+    tokenizer.text_to_ids(nan)
+    dropped = [c for c in tokenizer.not_found_characters if c not in PUNCTUATION_SAFE_TO_DROP]
+    if dropped:
+        return False, f"以下字元會被主力TTS靜默丟棄、不會被念出來：{dropped}"
+    return True, None
+
+
 ALL_CHECKS = [
     ("negation", check_negation),
     ("number_consistency", check_number_consistency),
