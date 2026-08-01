@@ -11,6 +11,7 @@ tests/audio/
 # 測試者的即時回覆資料（個人意見、持續累積），不進版控
 data/human_review/
 data/processed/
+reports/feedback_summary.md
 
 # Ollama / TTS 本機執行期產生的檔案
 *.wav
