@@ -38,6 +38,29 @@ Firebase專案），改規則要在那邊 `firebase deploy --only firestore:rule
 真實測試資料都在Firestore，本機 `data/human_review/` 底下的舊資料是遷移前的
 歷史存檔（遷移腳本：`scripts/migrate_to_firestore.py`）。
 
+## 開發者即時測試工具
+
+跟上面的驗證平台不同：這是給開發者自己測任意新句子用的，不是固定200句，
+也不給外部測試者用，只在本機跑，需要Ollama和neurlang模型都在本機才能動。
+
+網頁版（`live_test/`）：
+```bash
+source venv/bin/activate
+python3 live_test/app.py
+# 瀏覽器開 http://127.0.0.1:5002
+```
+輸入任意中文句子，按下按鈕後跑完整pipeline（Taigi-Llama翻譯 + neurlang語音
+合成），幾秒後網頁上直接顯示台語漢字並播放語音。
+
+指令列版（`scripts/zh_to_taigi_speech.py`，一次可測多句，用Finder開結果資料夾）：
+```bash
+python3 scripts/zh_to_taigi_speech.py "你的中文句子"
+python3 scripts/zh_to_taigi_speech.py "句子1" "句子2" "句子3"
+```
+
+兩者都需要venv是 `transformers<5`（neurlang用coqui-tts的要求）——如果剛測過
+MERaLiON（需要`transformers>=5.3.0`），記得先 `pip install "transformers<5"` 切回來。
+
 ## 環境設置
 
 ```bash
