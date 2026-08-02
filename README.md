@@ -41,25 +41,49 @@ Firebase專案），改規則要在那邊 `firebase deploy --only firestore:rule
 ## 開發者即時測試工具
 
 跟上面的驗證平台不同：這是給開發者自己測任意新句子用的，不是固定200句，
-也不給外部測試者用，只在本機跑，需要Ollama和neurlang模型都在本機才能動。
+只在本機跑，需要Ollama和TTS模型都在本機才能動，本機關機/沒開這個服務就
+連不到——這點跟已經遷到GitHub Pages+Firebase、不依賴任何一台電腦的驗證
+平台不一樣。
 
-網頁版（`live_test/`）：
+網頁版（`live_test/`）可以在同一個頁面切換 neurlang（快）/ MERaLiON（品質
+較好但慢約35倍）兩種語音引擎。因為兩者要的transformers版本互斥
+（`<5` vs `>=5.3.0`），沒辦法同一個process同時載入，所以拆成三個process：
+
 ```bash
+# 1. Ollama要先在跑
+ollama serve
+
+# 2. neurlang TTS後端（用主venv）
+source venv/bin/activate
+TTS_BACKEND=neurlang python3 live_test/tts_backend.py
+
+# 3. MERaLiON TTS後端（獨立的venv_meralion，避免版本衝突）
+source venv_meralion/bin/activate
+TTS_BACKEND=meralion python3 live_test/tts_backend.py
+
+# 4. gateway（只需要flask+requests，負責翻譯+轉發給上面兩個後端）
 source venv/bin/activate
 python3 live_test/app.py
-# 瀏覽器開 http://127.0.0.1:5002
+# 本機瀏覽器開 http://127.0.0.1:5002
+# 同一個Wi-Fi的其他裝置開 http://<這台Mac的區網IP>:5002（gateway綁0.0.0.0）
 ```
-輸入任意中文句子，按下按鈕後跑完整pipeline（Taigi-Llama翻譯 + neurlang語音
-合成），幾秒後網頁上直接顯示台語漢字並播放語音。
 
-指令列版（`scripts/zh_to_taigi_speech.py`，一次可測多句，用Finder開結果資料夾）：
+要讓外部網路（不限同一個Wi-Fi）也連得到，另外跑一個cloudflared tunnel指到
+gateway：
 ```bash
+nohup bash scripts/tunnel_watchdog.sh > tunnel_watchdog.log 2>&1 &
+cat CURRENT_TUNNEL_URL.txt   # 目前對外網址，斷線會自動重啟拿新網址
+```
+這一段跟驗證平台當初用過的watchdog機制一樣（斷線每60秒自動偵測重啟），只是
+現在指到這個開發測試用的gateway，不是驗證平台——驗證平台已經不需要靠本機了。
+
+指令列版（`scripts/zh_to_taigi_speech.py`，只用neurlang、一次可測多句，用
+Finder開結果資料夾），要另外手動確保主venv是 `transformers<5`：
+```bash
+source venv/bin/activate
 python3 scripts/zh_to_taigi_speech.py "你的中文句子"
 python3 scripts/zh_to_taigi_speech.py "句子1" "句子2" "句子3"
 ```
-
-兩者都需要venv是 `transformers<5`（neurlang用coqui-tts的要求）——如果剛測過
-MERaLiON（需要`transformers>=5.3.0`），記得先 `pip install "transformers<5"` 切回來。
 
 ## 環境設置
 
@@ -79,3 +103,11 @@ python3 scripts/run_tts_benchmark.py      # 階段4：統一TTS候選跑分（�
 
 模型權重（`models/`）、原始資料集下載（`data/raw/`）與合成音檔（`tests/audio/`）不進版控，
 需依上面指令重新產生。授權細節見 `data/licenses/`（下載後產生）與 `PLAN.md` 資源表。
+
+MERaLiON-OmniVoice-Hokkien-TTS 要的 `transformers>=5.3.0` 跟主venv用的
+`transformers<5`（neurlang/coqui-tts的要求）互斥，所以另外開一個獨立venv：
+```bash
+python3 -m venv venv_meralion
+source venv_meralion/bin/activate
+pip install torch torchaudio torchcodec omnivoice soundfile flask
+```

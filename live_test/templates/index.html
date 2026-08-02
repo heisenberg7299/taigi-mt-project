@@ -2,25 +2,37 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>台語翻譯即時測試</title>
   <style>
     body { font-family: -apple-system, "PingFang TC", sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
     h1 { font-size: 1.3em; }
     textarea { width: 100%; font-size: 1.1em; padding: 10px; box-sizing: border-box; }
+    .backends { margin: 12px 0; }
+    .backends label { display: block; padding: 8px 12px; margin-bottom: 6px; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; }
+    .backends input { margin-right: 8px; }
     button { margin-top: 10px; font-size: 1em; padding: 8px 20px; cursor: pointer; }
     .result { margin-top: 24px; padding: 16px; background: #f5f5f5; border-radius: 8px; }
     .result .zh { color: #666; }
     .result .han { font-size: 1.3em; margin: 8px 0; }
+    .result .backend-used { color: #666; font-size: 0.9em; }
     .error { margin-top: 24px; color: #c00; }
     audio { width: 100%; margin-top: 8px; }
   </style>
 </head>
 <body>
   <h1>中文 &rarr; 台語 即時測試</h1>
-  <p>輸入任意中文句子，跑完整pipeline（Taigi-Llama翻譯 + 語音合成）。
-  目前語音後端：<strong>{{ backend }}</strong>{% if backend == 'meralion' %}（比即時慢約35倍，生成需要數十秒，請耐心等）{% else %}（生成時間約數秒）{% endif %}</p>
+  <p>輸入任意中文句子，選一個語音引擎，跑完整pipeline（Taigi-Llama翻譯 + 語音合成）。</p>
   <form method="post">
-    <textarea name="zh" rows="3" placeholder="請問你今天肚子還會痛嗎？" autofocus>{{ zh }}</textarea><br>
+    <textarea name="zh" rows="3" placeholder="請問你今天肚子還會痛嗎？" autofocus>{{ zh }}</textarea>
+    <div class="backends">
+      {% for key, label in backend_labels.items() %}
+      <label>
+        <input type="radio" name="backend" value="{{ key }}" {% if backend == key %}checked{% endif %}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
     <button type="submit">翻譯+生成語音</button>
   </form>
 
@@ -32,6 +44,7 @@
   <div class="result">
     <div class="zh">中文：{{ result.zh }}</div>
     <div class="han">台語漢字：{{ result.han }}</div>
+    <div class="backend-used">語音引擎：{{ backend_labels[result.backend] }}</div>
     <audio controls autoplay src="{{ result.audio_url }}"></audio>
   </div>
   {% endif %}

@@ -2,6 +2,9 @@
 # 監控 cloudflared tunnel，斷線自動重啟，目前網址寫進固定檔案 CURRENT_TUNNEL_URL.txt
 # 方便隨時查詢，不用等人手動發現斷線才處理。
 #
+# 對外開放的是 live_test/app.py 這個gateway（本機測試平台，不是docs/驗證平台
+# ——那個已經在GitHub Pages上，不需要靠這台Mac開著）。
+#
 # 執行：nohup bash scripts/tunnel_watchdog.sh > ~/taigi-mt-project/tunnel_watchdog.log 2>&1 &
 
 CLOUDFLARED=/opt/homebrew/opt/cloudflared/bin/cloudflared
@@ -12,7 +15,7 @@ CHECK_INTERVAL=60
 start_tunnel() {
     pkill -f "cloudflared tunnel --url" 2>/dev/null
     sleep 2
-    nohup "$CLOUDFLARED" tunnel --url http://localhost:5001 > "$LOGFILE" 2>&1 &
+    nohup "$CLOUDFLARED" tunnel --url http://localhost:5002 > "$LOGFILE" 2>&1 &
     sleep 6
     URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' "$LOGFILE" | tail -1)
     if [ -n "$URL" ]; then

@@ -1,23 +1,29 @@
 """
-開發者自用的即時測試平台：瀏覽器輸入任意中文句子，馬上看到完整pipeline的
-翻譯結果+可播放的台語語音，不用每次都下指令跑 scripts/zh_to_taigi_speech.py。
+開發者自用的即時測試平台：瀏覽器輸入任意中文句子，選擇neurlang或MERaLiON，
+馬上看到完整pipeline的翻譯結果+可播放的台語語音。
 
 跟 docs/（給母語者測試者用的驗證平台，GitHub Pages上，只能對事先產生好的
-200句打分）不一樣：這裡是給開發者自己測、句子當場輸入當場生成、只在本機跑。
+200句打分）不一樣：這裡是給開發者自己測、句子當場輸入當場生成。
 
-中文 -> Taigi-Llama-2-Translator-7B(Ollama) -> 台語漢字 -> neurlang VITS -> 語音
+中文 -> Taigi-Llama-2-Translator-7B(Ollama) -> 台語漢字 -> neurlang/MERaLiON語音
 
-前置需求：
-- Ollama要在跑，且已經pull過 hf.co/RichardErkhov/Bohanlu_-_Taigi-Llama-2-Translator-7B-gguf:Q4_K_M
-- 語音合成後端(TTS_BACKEND環境變數)可選：
-  - neurlang（預設，目前正式在跑的方法，快、即時）：venv要是 transformers<5
-  - meralion（RTF=3.63，比即時慢35倍，僅供比較品質用）：venv要是 transformers>=5.3.0
+架構：這個app本身只做翻譯(呼叫Ollama)，不直接載入任何TTS模型，而是把台語
+漢字轉發給 tts_backend.py 開的內部API(127.0.0.1:5010=neurlang, :5011=meralion)。
+這樣拆是因為兩個TTS引擎要的transformers版本互斥，沒辦法同一個process同時
+載入，拆成獨立venv/process後才能在同一個網站上讓使用者自由切換兩種模式。
 
-執行：
+前置需求（三個都要先啟動，各自在自己的終端機視窗）：
+  1. ollama serve（且已pull過 hf.co/RichardErkhov/Bohanlu_-_Taigi-Llama-2-Translator-7B-gguf:Q4_K_M）
+  2. source venv/bin/activate && TTS_BACKEND=neurlang python3 live_test/tts_backend.py
+  3. source venv_meralion/bin/activate && TTS_BACKEND=meralion python3 live_test/tts_backend.py
+
+再啟動這個gateway（用主venv即可，只需要flask+requests）：
   source venv/bin/activate
-  python3 live_test/app.py                      # 預設neurlang
-  TTS_BACKEND=meralion python3 live_test/app.py  # 改用MERaLiON
-  瀏覽器開 http://127.0.0.1:5002
+  python3 live_test/app.py
+
+本機瀏覽器開 http://127.0.0.1:5002
+同一個Wi-Fi的其他裝置開 http://<這台Mac的區網IP>:5002（因為綁0.0.0.0）
+要給外部網路連：另外跑 cloudflared tunnel --url http://localhost:5002
 """
 import json
 import os
@@ -27,21 +33,17 @@ import uuid
 import requests
 from flask import Flask, render_template, request
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL = "hf.co/RichardErkhov/Bohanlu_-_Taigi-Llama-2-Translator-7B-gguf:Q4_K_M"
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_DIR = os.path.join(ROOT, "models", "neurlang-vits-suisiann")
 AUDIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "audio")
-TTS_BACKEND = os.environ.get("TTS_BACKEND", "neurlang")
-VOICE_REF_AUDIO = os.path.join(ROOT, "tests", "voice_refs", "neurlang_ref_16k.wav")
-VOICE_REF_TEXT = "阿媽，你這罐降血糖的欲囥佇冰櫥内底冷藏。"
+BACKEND_PORTS = {"neurlang": 5010, "meralion": 5011}
+BACKEND_LABELS = {
+    "neurlang": "neurlang（快，目前正式在跑的方法）",
+    "meralion": "MERaLiON（品質較好，但比即時慢約35倍，生成需數十秒）",
+}
 
 os.makedirs(AUDIO_DIR, exist_ok=True)
-
 app = Flask(__name__)
-synthesizer = None
-meralion_model = None
-meralion_voice_prompt = None
 
 
 def translate(zh):
@@ -55,45 +57,13 @@ def translate(zh):
     return re.sub(r"\[/?(HAN|POJ|HL|ZH|EN)\]\s*$", "", text).strip()
 
 
-def get_synthesizer():
-    global synthesizer
-    if synthesizer is None:
-        from TTS.utils.synthesizer import Synthesizer
-        synthesizer = Synthesizer(
-            tts_checkpoint=os.path.join(MODEL_DIR, "best_model.pth"),
-            tts_config_path=os.path.join(MODEL_DIR, "config.json"),
-        )
-    return synthesizer
-
-
-def get_meralion():
-    global meralion_model, meralion_voice_prompt
-    if meralion_model is None:
-        import torch
-        from omnivoice.models.omnivoice import OmniVoice
-        meralion_model = OmniVoice.from_pretrained(
-            "MERaLiON/MERaLiON-OmniVoice-Hokkien-TTS", device_map="cpu", dtype=torch.float32,
-        )
-        # voice clone成neurlang現有的聲音，兩個後端輸出音色才能直接比較
-        meralion_voice_prompt = meralion_model.create_voice_clone_prompt(
-            ref_audio=VOICE_REF_AUDIO, ref_text=VOICE_REF_TEXT,
-        )
-    return meralion_model, meralion_voice_prompt
-
-
-def synthesize(han):
-    """回傳 (wav檔案路徑)。依 TTS_BACKEND 決定用哪個引擎。"""
+def synthesize(han, backend):
+    port = BACKEND_PORTS[backend]
+    resp = requests.post(f"http://127.0.0.1:{port}/synthesize", json={"han": han}, timeout=120)
+    resp.raise_for_status()
     filename = f"{uuid.uuid4().hex}.wav"
-    out_path = os.path.join(AUDIO_DIR, filename)
-    if TTS_BACKEND == "meralion":
-        import soundfile as sf
-        model, voice_prompt = get_meralion()
-        audios = model.generate(text=han, language="nan", voice_clone_prompt=voice_prompt)
-        sf.write(out_path, audios[0], samplerate=model.sampling_rate)
-    else:
-        syn = get_synthesizer()
-        wav = syn.tts(han)
-        syn.save_wav(wav, out_path)
+    with open(os.path.join(AUDIO_DIR, filename), "wb") as f:
+        f.write(resp.content)
     return filename
 
 
@@ -102,6 +72,9 @@ def index():
     result = None
     error = None
     zh = ""
+    backend = request.values.get("backend", "neurlang")
+    if backend not in BACKEND_PORTS:
+        backend = "neurlang"
     if request.method == "POST":
         zh = request.form.get("zh", "").strip()
         if not zh:
@@ -109,20 +82,23 @@ def index():
         else:
             try:
                 han = translate(zh)
-                filename = synthesize(han)
-                result = {"zh": zh, "han": han, "audio_url": f"/static/audio/{filename}"}
-            except requests.exceptions.ConnectionError:
-                error = "連不到 Ollama，請確認 Ollama 有在跑（ollama serve）"
+                filename = synthesize(han, backend)
+                result = {"zh": zh, "han": han, "audio_url": f"/static/audio/{filename}", "backend": backend}
+            except requests.exceptions.ConnectionError as exc:
+                if "11434" in str(exc):
+                    error = "連不到 Ollama，請確認 Ollama 有在跑（ollama serve）"
+                else:
+                    error = f"連不到「{backend}」後端，請確認對應的 tts_backend.py 有啟動（見 app.py 檔頭說明）"
             except Exception as exc:
                 error = f"發生錯誤：{exc}"
-    return render_template("index.html", result=result, error=error, zh=zh, backend=TTS_BACKEND)
+    return render_template(
+        "index.html", result=result, error=error, zh=zh,
+        backend=backend, backend_labels=BACKEND_LABELS,
+    )
 
 
 if __name__ == "__main__":
-    print(f"載入語音合成後端：{TTS_BACKEND} ...")
-    if TTS_BACKEND == "meralion":
-        get_meralion()
-    else:
-        get_synthesizer()
-    print("準備好了，開瀏覽器：http://127.0.0.1:5002")
-    app.run(host="127.0.0.1", port=5002, debug=False)
+    print("準備好了。")
+    print("本機瀏覽器：http://127.0.0.1:5002")
+    print("同網路其他裝置：http://<這台Mac的區網IP>:5002")
+    app.run(host="0.0.0.0", port=5002, debug=False)
