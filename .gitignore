@@ -13,6 +13,7 @@ tests/tts_benchmark_audio/
 data/human_review/
 data/processed/
 reports/feedback_summary.md
+reports/errors.csv
 
 # Ollama / TTS 本機執行期產生的檔案
 *.wav
