@@ -17,7 +17,8 @@
 </head>
 <body>
   <h1>中文 &rarr; 台語 即時測試</h1>
-  <p>輸入任意中文句子，跑完整pipeline（Taigi-Llama翻譯 + neurlang語音合成），生成時間約數秒。</p>
+  <p>輸入任意中文句子，跑完整pipeline（Taigi-Llama翻譯 + 語音合成）。
+  目前語音後端：<strong>{{ backend }}</strong>{% if backend == 'meralion' %}（比即時慢約35倍，生成需要數十秒，請耐心等）{% else %}（生成時間約數秒）{% endif %}</p>
   <form method="post">
     <textarea name="zh" rows="3" placeholder="請問你今天肚子還會痛嗎？" autofocus>{{ zh }}</textarea><br>
     <button type="submit">翻譯+生成語音</button>
