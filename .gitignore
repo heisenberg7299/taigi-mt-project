@@ -1,4 +1,5 @@
 venv/
+venv_meralion/
 __pycache__/
 *.pyc
 .DS_Store
@@ -26,3 +27,8 @@ reports/errors.csv
 CURRENT_TUNNEL_URL.txt
 cloudflared.log
 tunnel_watchdog.log
+
+# live_test平台(scripts/start_live_test.sh)執行期產生的log
+live_test_neurlang.log
+live_test_meralion.log
+live_test_gateway.log

@@ -46,36 +46,25 @@ Firebase專案），改規則要在那邊 `firebase deploy --only firestore:rule
 平台不一樣。
 
 網頁版（`live_test/`）可以在同一個頁面切換 neurlang（快）/ MERaLiON（品質
-較好但慢約35倍）兩種語音引擎。因為兩者要的transformers版本互斥
-（`<5` vs `>=5.3.0`），沒辦法同一個process同時載入，所以拆成三個process：
+較好但慢約35倍）兩種語音引擎。一鍵啟動/關閉：
 
 ```bash
-# 1. Ollama要先在跑
-ollama serve
+ollama serve   # 先確保這個有在跑（另開一個終端機視窗）
 
-# 2. neurlang TTS後端（用主venv）
-source venv/bin/activate
-TTS_BACKEND=neurlang python3 live_test/tts_backend.py
-
-# 3. MERaLiON TTS後端（獨立的venv_meralion，避免版本衝突）
-source venv_meralion/bin/activate
-TTS_BACKEND=meralion python3 live_test/tts_backend.py
-
-# 4. gateway（只需要flask+requests，負責翻譯+轉發給上面兩個後端）
-source venv/bin/activate
-python3 live_test/app.py
-# 本機瀏覽器開 http://127.0.0.1:5002
-# 同一個Wi-Fi的其他裝置開 http://<這台Mac的區網IP>:5002（gateway綁0.0.0.0）
+bash scripts/start_live_test.sh   # 啟動neurlang後端+MERaLiON後端+gateway+對外tunnel
+bash scripts/stop_live_test.sh    # 全部關閉
 ```
+啟動完成後終端機會印出本機網址（`http://127.0.0.1:5002`）跟對外網址
+（`CURRENT_TUNNEL_URL.txt`，同一個Wi-Fi的其他裝置或外部網路都能連，網址
+每次啟動都會變，斷線每60秒自動偵測重啟——沿用驗證平台當初用過的
+watchdog機制，只是現在指到這個開發測試用的gateway，不是驗證平台，驗證
+平台本身已經不需要靠本機了）。
 
-要讓外部網路（不限同一個Wi-Fi）也連得到，另外跑一個cloudflared tunnel指到
-gateway：
-```bash
-nohup bash scripts/tunnel_watchdog.sh > tunnel_watchdog.log 2>&1 &
-cat CURRENT_TUNNEL_URL.txt   # 目前對外網址，斷線會自動重啟拿新網址
-```
-這一段跟驗證平台當初用過的watchdog機制一樣（斷線每60秒自動偵測重啟），只是
-現在指到這個開發測試用的gateway，不是驗證平台——驗證平台已經不需要靠本機了。
+背後架構：因為neurlang跟MERaLiON要的transformers版本互斥（`<5` vs
+`>=5.3.0`），沒辦法同一個process同時載入，所以拆成三個process——
+gateway（`live_test/app.py`，只做翻譯+轉發，用主venv）+ 兩個獨立的
+`live_test/tts_backend.py`（各自跑在獨立venv，內部port互不干擾），
+`start_live_test.sh`/`stop_live_test.sh` 會照順序啟動/關閉全部。
 
 指令列版（`scripts/zh_to_taigi_speech.py`，只用neurlang、一次可測多句，用
 Finder開結果資料夾），要另外手動確保主venv是 `transformers<5`：
