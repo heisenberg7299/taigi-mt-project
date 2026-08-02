@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|---|
 | `neurlang/coqui-vits-suisiann-minnan-hokkien` | **已驗證可用（目前主力）** | CC-BY-SA-4.0 | VITS，CPU RTF~0.11-0.13 | Hanji（漢字，內建pygoruut自動轉IPA） | None | 已產生200句候選音檔，正在收母語者回饋 |
 | MediaTek BreezyVoice-Taigi | **查無公開權重，無法實測** | 論文未揭露 | CosyVoice2微調，~10,000小時合成資料 | 不明（論文未寫） | 不明 | 論文（[arXiv:2603.19259](https://arxiv.org/html/2603.19259)）有報告數字但 HuggingFace 上找不到對應模型檔；已搜尋 MediaTek-Research 全部27個模型跟關鍵字「Taigi」「BreezyVoice」都沒有這個repo。**重要發現**：論文自報的「台語發音準確率只有59.2%」——連 MediaTek 專門投入的模型都只有六成不到的道地發音率，這代表台語TTS本身難度很高，不是我們資源不夠的問題 |
-| [MERaLiON-OmniVoice-Hokkien-TTS](https://huggingface.co/MERaLiON/MERaLiON-OmniVoice-Hokkien-TTS) | 可下載，未實測 | MERaLiON-3-Public-Licence（自訂條款，需另外詳讀是否允許研究/商用） | 0.8B參數，~2.7GB，支援聲音克隆 | 待確認（`generate(text=..., language="nan")`，文件沒明講吃漢字還是羅馬字） | 待實測後才知道 | **要注意的是這是新加坡福建話（Singapore Hokkien），不是台灣台語**——兩者同源但用詞、部分腔調有差異，混用可能被台灣母語者聽出「怪腔怪調」。自報指標：WER 0.33（不算低）、自然度8.4/10、DNSMOS 3.13/5 |
+| [MERaLiON-OmniVoice-Hokkien-TTS](https://huggingface.co/MERaLiON/MERaLiON-OmniVoice-Hokkien-TTS) | **已實測，重新評為積極候選（見下方）** | MERaLiON-3-Public-Licence（自訂條款，需另外詳讀是否允許研究/商用） | 0.8B參數，~2.7GB，支援聲音克隆 | Hanji（漢字），`generate(text=..., language="nan")` | None | 新加坡福建話模型，但實測發現可以voice clone成neurlang的聲音、且會自動對難字code-switch成中文發音（見下方詳細） |
 | Curiousfox / wenxinkoh06 的 `speecht5_tailo-hokkien` 系列 | **Conditional fallback — frontend prototype available**（見下方 taibun 前端測試） | MIT（模型）+ MIT/CC-BY-SA-4.0（taibun） | SpeechT5微調（0.1B），體積小 | Tâi-lô羅馬字（漢字直接輸入會失敗，需前端轉換） | `taibun` Hanji→Tâi-lô（已接上，見下方） | 命名用「tailo」明確針對台灣台語，授權最寬鬆 |
 | `chen778560489/coqui-vits-suisiann-minnan-hokkien` | 略過 | 同neurlang | - | 同neurlang | None | 看起來是 neurlang 模型的 fork/鏡像，非獨立模型，跳過 |
 
@@ -270,6 +270,60 @@ taibun剛好支援輸出TLPA格式（`Converter(system="TLPA")`），輸出跟�
 3. 換embedding後如果還是差，才評估用台語語音重新fine-tune SpeechT5
 4. 最後才回頭檢查少數G2P錯誤，不要再把整體品質問題歸因於羅馬字格式
    （這輪已經驗證過格式不是主因）
+
+## MERaLiON-OmniVoice-Hokkien-TTS 實測（2026-08-02）
+
+裝套件過程再踩到一次版本衝突：`omnivoice`要求`transformers>=5.3.0`，
+neurlang用的`coqui-tts`要求`transformers<5`，兩者不能在同一個venv session
+共存——測試時用「先產生好的neurlang音檔」當voice clone參考，不在同一個
+process裡同時import兩個套件，繞過這個衝突（正式要並用兩個模型，需要拆成
+兩個venv或兩個獨立process）。
+
+### 測試1：Voice cloning能不能模仿neurlang現有的聲音
+
+用一段既有的neurlang輸出音檔（5.5秒，resample到16kHz）當`ref_audio`，
+建立voice clone prompt，生成同樣3句話跟「用模型內建參考語音」的版本對照。
+**開發者實際聽過，結論「蠻像的」**——voice cloning成功讓輸出聲音貼近
+現有的neurlang語者，這代表如果之後要混用兩個TTS模型，不用忍受兩種完全
+不同的音色。
+
+### 測試2：擴大到10句「不在200句測試集裡」的新句子（來自safety-critical分析那批）
+
+同樣用neurlang聲音複製，全部10句都成功生成，沒有crash。
+
+### 意外發現：似乎會自動對難詞做中文code-switch
+
+開發者聽過這批音檔後回報：**部分句子裡「比較難的字」（例如「輪椅」）會自動
+用中文發音唸出來，不是硬套台語腔**。這如果屬實，代表MERaLiON可能從訓練
+資料（新加坡福建話本來就常有中文/馬來語/英語code-switching，demo範例裡
+就有「我 suka 食紅豆冰」這種例子）裡自然學到「難詞退回中文發音」這個行為，
+不需要我們自己刻意做protected token或音檔拼接工程。
+
+**這正好是稍早討論的「不會念就用中文念」的需求**——如果MERaLiON真的穩定
+有這個行為，代表這個方向比手動拼接macOS `say`語音（`scripts/code_switch_tts.py`
+那個陽春原型）更值得投入，因為是同一個模型/同一個語者一次生成，不用處理
+兩種引擎銜接的問題。
+
+**還沒確認的細節**：哪些字會觸發code-switch（真的是「難字」還是隨機的？）、
+觸發比例多高、是不是跟voice cloning有關（用內建語音會不會也一樣）。需要
+更系統性的測試才能下定論，目前只是聽感觀察。
+
+### 也發現的問題：斷句在詞中間
+
+部分句子聽起來「一個詞中間被斷開」，開發者形容「聽起來很怪」。具體是哪句
+哪個詞、是否跟特定標點或詞彙有關，還沒有精確定位（問了但沒有得到具體回覆），
+先記錄現象存在，之後有機會再具體定位。
+
+### 初步結論
+
+MERaLiON從原本「新加坡腔、當對照組」的定位，**因為voice cloning效果好+
+可能自帶code-switch行為，重新評為積極候選**，優先度提升。下一步：
+
+- [ ] 系統性測試code-switch行為的觸發條件（哪些詞會、哪些不會）
+- [ ] 定位斷句問題的具體觸發條件
+- [ ] 評估MERaLiON-3-Public-Licence條款是否允許研究/後續商用
+- [ ] 如果code-switch行為穩定，重新評估是否要投入「兩個TTS引擎混用」
+      還是直接讓MERaLiON取代/輔助neurlang
 
 ## 系統設計原則（這次的實測讓這件事變得明確）
 
