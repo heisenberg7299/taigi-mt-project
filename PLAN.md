@@ -1,6 +1,19 @@
-# 低資源中文—臺灣台語機器翻譯研究計畫
+# 低資源中文—臺灣台語機器翻譯研究計畫（Safe Medical Taiwanese Translation）
 
 研究定位：**低資源中文—臺灣台語機器翻譯，結合書寫正規化、詞彙消歧與台語語音合成**，最終服務於醫療服務機器人的台語輸出能力。
+
+**2026-08-02更新**：實測發現Taigi-Llama在200句curated測試集之外的新句子上，
+40%（4/10）出現safety-critical等級的語意流失（見
+`reports/safety_critical_translation_failures.md`）——不是隨機亂翻，是流暢、
+通順但關鍵資訊（人名/藥名/職稱/情境）消失或被幻覺成別的內容，這種錯誤比
+明顯的錯譯更危險，BLEU這類傳統指標也量不出來。**研究定位因此收斂成
+「Safe Medical Taiwanese Translation」，不只是「翻得通不通」，而是「哪些
+資訊類型絕對不能讓模型自由生成」。**
+
+**目前優先順序改成 P0（翻譯安全）> P1（TTS品質）**：如果翻譯階段已經把
+「盤尼西林」這類關鍵藥名吃掉，後面TTS再標準也沒有意義。之前重心在TTS
+（階段4、OOV audit）的工作仍然有效、仍然要做，但階段6的模型選擇不能再
+繞過翻譯安全這一層。
 
 ## 技術鏈
 
@@ -89,7 +102,8 @@
 - [ ] **階段4（`speecht5_tailo-hokkien`接上taibun前端後轉為conditional fallback）：TTS 模型比較** — 調研結果見 `reports/stage4_tts_candidates.md`。**BreezyVoice-Taigi 查無公開權重，無法實測**（論文自報台語發音準確率只有59.2%，顯示台語TTS本身難度高，非資源問題）。**`speecht5_tailo-hokkien` 只吃Tâi-lô/英文，漢字直接輸入會失敗**（G2P問題，跟「華語→台語翻譯」不是同一件事：翻譯要處理語意/詞彙/語序，G2P輸入已經是正確台語漢字只需決定讀音）——查到公開套件 `taibun`（Hanji→Tâi-lô，MIT+CC-BY-SA-4.0）可以直接當frontend，接上後6句漢字測試全部技術性成功（靜音比例43-48%，跟其他正常案例同一範圍），狀態改為`Conditional fallback`。**注意：只證明技術可行，taibun轉出的Tâi-lô是否字音正確仍需母語者驗證，還沒做**。已建好可重複使用的統一跑分框架 `scripts/tts_benchmark/`（12句固定測試集×5指標+frontend_output欄位，新增候選只要寫一個adapter），目前已測3個adapter組合。`MERaLiON-OmniVoice-Hokkien-TTS`（新加坡腔非台灣腔，當對照組）待測，且要先確認它吃漢字還是羅馬字
 - [x] **階段4.5（新增）：錯誤分析（Error Analysis）** — 卡在TTS驗證跟自建語料中間，目的是讓階段6的模型選擇有真實錯誤分布依據，不要先選模型再找理由。用驗證平台已收集的69筆真實回覆分析，結果見 `reports/stage4.5_error_analysis.md` + `reports/errors.csv`（`scripts/build_error_analysis.py`可重跑）。**分布**：MEDICAL_TERM 18%、NEGATION 15%、STYLE 15%、CODE_SWITCH 13%、NUMBER 9%、PRONUNCIATION 7%、UNKNOWN 24%。**意外發現**：有備註的資料裡好幾筆講的是「發音錯」不是「翻譯錯」（例如「梯錯了」「燒錯了」），跟階段3的OOV audit（84%句子送氣/鼻化符號缺vocab）直接對得上——代表部分「需修改」判定其實是TTS發音問題，不是翻譯模型的問題，階段6決策不能把兩者混為一談。**方法論限制**：95%問題資料測試者沒填實際修改內容，大部分分類是弱訊號，樣本量(55筆)也還不夠，**現在不能用這份分布下結論**，下一步要先改驗證平台表單區分「翻譯錯/發音錯」，累積到200-300筆有效資料再重跑
 - [ ] **階段5：自建領域資料** — 目標建立正式的 Medical Taigi Corpus v1（train/valid/test split，欄位含zh/nan_han/tailo/intent/speaker/verified/votes/domain/difficulty），1,000~3,000組醫療/服務情境句對，每個意圖多種問法，母語者校正。應同時收集「翻譯correction」和「發音correction」兩種標註（見階段4.5教訓）
-- [ ] **階段6：決定是否訓練專用模型** — 由階段4.5的錯誤分布推動決策，不是先選模型：例如若絕大多數錯誤是醫療詞彙 → 傾向 lexicon-constrained decoding／LoRA；若絕大多數是語法/長句 → 傾向 mBART/NLLB微調；若絕大多數是發音而非翻譯 → 該投資的是TTS(語者embedding/G2P)而非翻譯模型。三選一：(A) baseline+檢查層已夠用 (B) LoRA領域微調 (C) 堅持不用LLM則微調 mBART/NLLB/自建小型Transformer
+- [x] **階段4.6（新增）：Safety-Critical Translation Failure Analysis** — 用10句**不在200句測試集裡**的新句子測Taigi-Llama泛化能力，結果見 `reports/safety_critical_translation_failures.md`。**40%(4/10)出現safety-critical等級失敗**：藥名「盤尼西林」被整個吃掉、病人名字「小明」被丟掉只剩姓、職稱被幻覺（呼吸治療師→氧氣治療師）、情境被誤譯（隔壁床呼叫鈴→鄰居吹哨子）。定義四層嚴重度：Level 0正確/Level 1可接受改寫/Level 2語意流失/Level 3安全等級。**Protected Token pipeline原型**（`scripts/protected_token_pipeline.py`）：用純大寫英文佔位符（如`DRUGA`）遮蓋關鍵詞再翻譯、譯完還原——盤尼西林案例成功救回，人名案例失敗，證實方法有效但用「文字替換+生成式LLM」不是100%可靠，救回率跟句子上下文有關。樣本只有4個案例，下一步要擴大測試量化真實救回率
+- [ ] **階段6：決定是否訓練專用模型** — 由階段4.5/4.6的發現共同推動決策，不是先選模型。**P0是翻譯安全**：先確認人名/藥名/病房號/醫療器材/職稱這類關鍵資訊能不能穩定保留（擴大Protected Token測試、或評估constrained decoding／非生成式架構），這比P1(TTS，含語者embedding/G2P)更優先。若翻譯安全問題能用輕量的Protected Token解決 → 可能不需要換模型架構；若救回率太低 → 才需要考慮LoRA/mBART/constrained decoding這類更大的投入。三選一：(A) baseline+檢查層已夠用 (B) LoRA領域微調 (C) 堅持不用LLM則微調 mBART/NLLB/自建小型Transformer
 
 ---
 
