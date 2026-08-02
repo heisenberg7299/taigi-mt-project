@@ -38,8 +38,8 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 AUDIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "audio")
 BACKEND_PORTS = {"neurlang": 5010, "meralion": 5011}
 BACKEND_LABELS = {
-    "neurlang": "neurlang（快，目前正式在跑的方法）",
-    "meralion": "MERaLiON（品質較好，但比即時慢約35倍，生成需數十秒）",
+    "neurlang": "neurlang",
+    "meralion": "MERaLiON",
 }
 
 os.makedirs(AUDIO_DIR, exist_ok=True)
