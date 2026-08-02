@@ -368,8 +368,75 @@ cloning能對兩者都套用同一個複製聲音，理論上可以用同一個�
 如果之後要重新investigate，值得先做的：
 - [ ] 確認MERaLiON的`language`參數在**沒有voice cloning**（用內建語音）
       時，`zh`跟`nan`的差異是否比較明顯——目前只測過cloning模式
-- [ ] 評估MERaLiON-3-Public-Licence條款是否允許研究/後續商用
+- [x] 評估MERaLiON-3-Public-Licence條款是否允許研究/後續商用——見下方，
+      **沒有非商業限制**
 - [ ] 定位斷句在詞中間的問題，具體觸發條件
+
+### 授權條款已查證（2026-08-02）：沒有非商業限制，比Taigi-Llama寬鬆很多
+
+讀了完整PDF（[MERaLiON-3-Public-Licence.pdf](https://huggingface.co/datasets/MERaLiON/MERaLiON_Public_Licence/blob/main/MERaLiON-3-Public-Licence.pdf)）。
+`MERaLiON-Hokkien-TTS`這個變體具體適用：**MIT License + OpenAI
+Whisper-Large-V3 Community License Agreement**（不是文件裡列給其他
+MERaLiON變體用的Gemma/Apache那組）。
+
+主要義務（**不是禁止商用**，是使用規範）：
+- 拿模型/輸出做產品或服務，要在合理位置（About頁、使用手冊等）放致謝
+  聲明，官方提供制式文字：「The development of this product/service
+  was assisted by MERaLiON, an AI model developed by A*STAR.」
+- 若要**散布模型本身**（不只是用輸出），要保留創作者身分/版權聲明/
+  免責聲明/修改標註
+- 官方免責聲明：這個模型沒特別做過safety alignment，使用者要自己負責
+  安全性把關
+- 「Out-of-Scope Use」註明不適合數學/coding任務——跟TTS用途無關
+
+**這代表MERaLiON目前查到的授權條件，明顯比Taigi-Llama-2-Translator-7B
+（CC-BY-NC-SA-4.0，明確禁止商用）寬鬆**，只要放致謝聲明就能用在產品/
+服務上。這是個實質性的優點，之前把MERaLiON當「對照組」時完全沒考慮到
+這點。
+
+### 開發者整體評價：目前測過的候選裡MERaLiON表現最好
+
+開發者聽過所有候選（neurlang、speecht5_tailo_via_taibun、MERaLiON各種
+測試音檔）後的整體判斷：**「目前覺得mer的表現最好」**。雖然中台混讀
+這個特定功能三條路都沒測成功（見上），但這是對MERaLiON**整體語音品質/
+自然度**的正面評價，跟code-switch功能是否成功是兩件事。
+
+綜合這輪的發現（voice cloning效果好+授權比Taigi-Llama寬鬆+開發者整體
+評價最高），**MERaLiON值得認真考慮從候選轉為主力**。
+
+### 正式接進benchmark框架的客觀結果：速度是硬傷
+
+已寫成正式adapter（`scripts/tts_benchmark/adapters/meralion_omnivoice.py`），
+用同一份固定測試集的6句（han類）跑分，跟neurlang在同一個基準上比較
+（見下方，不再只憑聽感判斷）：
+
+| model | 平均靜音比例 | 平均RTF |
+|---|---|---|
+| neurlang-vits-suisiann | 53% | **0.103**（CPU上比即時快約10倍） |
+| meralion-omnivoice-hokkien | 28% | **3.632**（CPU上比即時慢約3.6倍） |
+
+**RTF差了35倍**，這是硬體限制不是模型品質問題——MERaLiON在CPU上合成
+一句話要花超過真實語音長度3倍多的時間，不是即時的。對互動式醫療服務
+機器人來說，使用者問一句話、等好幾秒才有語音回應，體驗上是個實際問題，
+不是可以忽略的細節。
+
+靜音比例MERaLiON明顯較低（28% vs 53%），代表講話節奏比較緊湊、停頓少，
+這可能是好事（更流暢）也可能是壞事（語氣詞/自然停頓被壓縮），純數字
+看不出來，需要人耳判斷。
+
+**這把「MERaLiON整體表現最好」這個聽感判斷加上一個重要but**：音質/
+自然度可能真的比較好，但**目前的CPU推論速度不足以支撐即時互動**，
+除非之後有GPU可以部署、或找到加速方法，不然沒辦法直接取代neurlang
+當即時互動系統的主力，比較適合先當「音質基準/離線批次生成」用途。
+
+## 下一步待辦（TTS部分整體匯總）
+
+- [ ] 評估MERaLiON能不能用GPU加速（這台開發機是CPU-only的Mac，沒辦法
+      本機測，需要另外找GPU環境或雲端資源）
+- [ ] 定位斷句在詞中間的問題，具體觸發條件
+- [ ] 確認`language="zh"/"nan"`在沒有voice cloning時差異是否比較明顯
+- [ ] 如果RTF問題解不掉，MERaLiON定位維持「音質基準/離線用途」，
+      neurlang繼續當即時互動的主力
 
 ## 系統設計原則（這次的實測讓這件事變得明確）
 

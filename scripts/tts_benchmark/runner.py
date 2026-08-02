@@ -83,11 +83,27 @@ def _save_wav(samples, sample_rate, path):
     sf.write(path, samples, samplerate=sample_rate)
 
 
+def _load_existing_results():
+    if not os.path.exists(RESULTS_JSONL):
+        return []
+    with open(RESULTS_JSONL) as f:
+        return [json.loads(l) for l in f if l.strip()]
+
+
 def run_all(adapters):
+    """合併寫入，不是覆蓋整個檔案——同一個model名字的舊資料會被這次跑的結果
+    取代，其他model的舊資料保留。這是為了支援MERaLiON這種因為套件版本衝突
+    (transformers>=5 vs <5) 必須拆到不同venv session單獨跑的adapter，
+    每次單獨跑不會把其他adapter之前的結果洗掉。"""
     os.makedirs(os.path.dirname(RESULTS_JSONL), exist_ok=True)
-    all_results = []
+
+    new_results = []
     for adapter in adapters:
-        all_results.extend(run_adapter(adapter))
+        new_results.extend(run_adapter(adapter))
+
+    new_model_names = set(r["model"] for r in new_results)
+    existing = [r for r in _load_existing_results() if r["model"] not in new_model_names]
+    all_results = existing + new_results
 
     with open(RESULTS_JSONL, "w") as f:
         for r in all_results:
@@ -100,7 +116,8 @@ def run_all(adapters):
         for r in all_results:
             writer.writerow({k: r.get(k) for k in CSV_FIELDS})
 
-    print(f"\n完成，共 {len(all_results)} 筆結果")
+    print(f"\n這次跑了 {len(new_results)} 筆，加上其他adapter既有的 {len(existing)} 筆，"
+          f"總共 {len(all_results)} 筆")
     print(f"  {RESULTS_JSONL}")
     print(f"  {RESULTS_CSV}")
     return all_results
