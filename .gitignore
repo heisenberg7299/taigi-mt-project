@@ -2,6 +2,7 @@ venv/
 venv_meralion/
 __pycache__/
 *.pyc
+.pytest_cache/
 .DS_Store
 
 # 大型/可重新產生的檔案，不進版控

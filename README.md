@@ -82,6 +82,28 @@ python3 scripts/zh_to_taigi_speech.py "你的中文句子"
 python3 scripts/zh_to_taigi_speech.py "句子1" "句子2" "句子3"
 ```
 
+## 新架構探索：`tw_hokkien_tts_pipeline/`
+
+跟上面`live_test/`「單一LLM直接輸出台語漢字→TTS直接吃漢字」的做法不同，這是
+一個分層更明確的骨架：**遮罩(Protected Token) → 翻譯 → 斷詞轉台羅 → 正規化/
+連讀變調 → 還原 → TTS**，把藥名/人名保護做成pipeline的第一層而不是事後補救，
+還有一個`require_full_protected_coverage`開關——查無人工校正過的台羅讀音時
+直接擋下不合成，而不是讓TTS用猜的發音念藥名。
+
+**目前所有backend都是mock**（翻譯/斷詞/TTS都是佔位邏輯，不是真的在跑），
+用途是先把分層架構、debug trace、安全門檻的邏輯骨架驗證過一遍：
+```bash
+pip install -r tw_hokkien_tts_pipeline/requirements.txt
+python3 -m pytest tw_hokkien_tts_pipeline/tests/ -v
+
+python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林。" \
+  --output-dir ./pipeline_output
+```
+換成真實backend前要做的事、各層現況，見 [`tw_hokkien_tts_pipeline/README.md`](./tw_hokkien_tts_pipeline/README.md)。
+
+`live_test/`（neurlang+MERaLiON）目前維持現有、已驗證能實際出聲的版本，當作
+保底方案，不受這個探索中的新方向影響。
+
 ## 環境設置
 
 ```bash

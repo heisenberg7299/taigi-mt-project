@@ -1,0 +1,13 @@
+# 核心 pipeline (mock 模式) 只需要標準庫, 以下為選用依賴
+
+pytest>=7.0          # 執行 tests/
+
+# real 翻譯後端 (HTTPTranslationBackend) 才需要
+requests>=2.28
+
+# real TTS 後端 (SpeechT5TailoBackend) 才需要
+# transformers>=4.30
+# torch>=2.0
+# soundfile>=0.12
+# sentencepiece
+# numpy
