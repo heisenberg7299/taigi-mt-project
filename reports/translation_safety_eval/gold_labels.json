@@ -1,0 +1,668 @@
+[
+  {
+    "split": "dev",
+    "id": "drug_001",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "藥名/劑量/時間/否定詞全部正確保留"
+  },
+  {
+    "split": "dev",
+    "id": "drug_001",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "drug_name_genericized",
+    "notes": "普拿疼被籠統化成「藥仔」，藥名遺失"
+  },
+  {
+    "split": "dev",
+    "id": "drug_002",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "critical_entity_omission",
+    "notes": "盤尼西林完全消失，問句變成不知道在問什麼過敏"
+  },
+  {
+    "split": "dev",
+    "id": "drug_002",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "盤尼西林保留正確；「敢會」是台語是非問句標記，語法上不需要顯式否定詞——這個判斷仰賴評估者對台語語法的一般知識，非母語者、非100%把握"
+  },
+  {
+    "split": "dev",
+    "id": "drug_003",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 1,
+    "error_type": "drug_name_paraphrased",
+    "notes": "胰島素被改述成「降血糖的」，不精確但沒有錯誤資訊(跟原始10句報告的Level 1分類一致)"
+  },
+  {
+    "split": "dev",
+    "id": "drug_003",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "medical_instruction_altered",
+    "notes": "胰島素名稱保留，但「冷藏」被換成「冷凍」——胰島素不能冷凍(會破壞藥效)，這是結構化標註schema沒有涵蓋到的實質醫療內容錯誤，只有逐句閱讀才抓得到"
+  },
+  {
+    "split": "dev",
+    "id": "drug_004",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "降血壓藥/劑量/時間都正確保留(改述但語意完整)"
+  },
+  {
+    "split": "dev",
+    "id": "drug_004",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "同上"
+  },
+  {
+    "split": "dev",
+    "id": "drug_005",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "nonsensical_substitution",
+    "notes": "「停藥」被換成「停睏」(停止睡眠)，語意不通，抗生素療程中斷警告的核心動作被錯誤替換"
+  },
+  {
+    "split": "dev",
+    "id": "drug_005",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "抗生素/五工/停藥都正確"
+  },
+  {
+    "split": "dev",
+    "id": "drug_006",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "drug_name_hallucinated",
+    "notes": "「普拿疼」被幻覺成「普拿金」，藥名corruption"
+  },
+  {
+    "split": "dev",
+    "id": "drug_006",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "drug_name_genericized",
+    "notes": "普拿疼被籠統化成「藥仔」"
+  },
+  {
+    "split": "dev",
+    "id": "drug_006",
+    "label": "structured_c",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "候選C模板正確渲染普拿疼/兩擺/暗時/毋通閣食"
+  },
+  {
+    "split": "dev",
+    "id": "person_001",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "person_name_incomplete",
+    "notes": "名字「小明」遺失，只剩「王先生」，多病人情境下無法確認對象"
+  },
+  {
+    "split": "dev",
+    "id": "person_001",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "person_name_lost_completely",
+    "notes": "連姓氏都遺失，只剩「先生」完全無法識別是誰"
+  },
+  {
+    "split": "dev",
+    "id": "person_001",
+    "label": "structured_c",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "候選C模板保證姓名+稱謂100%正確，姓名不經過LLM"
+  },
+  {
+    "split": "dev",
+    "id": "person_002",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "陳美惠小姐/護理站都正確保留"
+  },
+  {
+    "split": "dev",
+    "id": "person_002",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "person_name_lost_completely",
+    "notes": "「陳美惠」完全遺失，只剩「小姐」"
+  },
+  {
+    "split": "dev",
+    "id": "person_003",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "domain_shift",
+    "notes": "「隔壁床」變「厝邊兜」(鄰居)，「呼叫鈴」變「歕哨音」(吹哨子)，醫院情境整個變成鄰里情境，語法通順但語意完全跑掉，比明顯的錯誤更危險"
+  },
+  {
+    "split": "dev",
+    "id": "person_003",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "person_identity_genericized",
+    "notes": "位置「隔壁床」這次正確保留，但「陳太太」變成籠統的「人影」，身分不明；因為位置正確，照顧者仍能採取合理行動，嚴重度低於raw版本的完全domain shift"
+  },
+  {
+    "split": "dev",
+    "id": "person_004",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "李醫師/林先生都正確"
+  },
+  {
+    "split": "dev",
+    "id": "person_004",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "staff_name_lost",
+    "notes": "「李醫師」變成籠統的「人」，病人不知道是哪位醫師要來"
+  },
+  {
+    "split": "dev",
+    "id": "person_005",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "王先生/林小姐/出院都正確"
+  },
+  {
+    "split": "dev",
+    "id": "person_005",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "同上"
+  },
+  {
+    "split": "dev",
+    "id": "person_006",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "張美玲/女兒/到醫院都正確保留，「去病院」語意略有模糊(已出發還是已抵達)但不影響核心資訊"
+  },
+  {
+    "split": "dev",
+    "id": "person_006",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "同上，「送到病院」語意完整"
+  },
+  {
+    "split": "dev",
+    "id": "role_location_001",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "staff_role_hallucinated",
+    "notes": "「呼吸治療師」被幻覺成「氧氣治療師」，這個職稱在台灣醫療體系裡不存在"
+  },
+  {
+    "split": "dev",
+    "id": "role_location_002",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "domain_shift",
+    "notes": "陳太太姓名保留，但呼叫鈴又被誤譯成「歕哨音」(吹哨子)，設備描述錯誤，核心「需要協助」訊息仍大致可傳達"
+  },
+  {
+    "split": "dev",
+    "id": "role_location_002",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "person_identity_lost",
+    "notes": "隔壁床位置正確保留，但陳太太身分變成籠統的「人影」，且呼叫鈴變成「擛手」(揮手)"
+  },
+  {
+    "split": "dev",
+    "id": "role_location_003",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "三號病房/護理師/量血壓都正確"
+  },
+  {
+    "split": "dev",
+    "id": "role_location_004",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "麻醉科醫師/手術風險都正確"
+  },
+  {
+    "split": "dev",
+    "id": "role_location_005",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "營養師/流質食物都正確"
+  },
+  {
+    "split": "dev",
+    "id": "role_location_006",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "對面床/家屬/護理站都正確"
+  },
+  {
+    "split": "dev",
+    "id": "negation_urgent_001",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "critical_entity_omission",
+    "notes": "「海鮮」完全消失，跟盤尼西林案例同一種失敗模式"
+  },
+  {
+    "split": "dev",
+    "id": "negation_urgent_002",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "八小時/禁食禁水都正確保留"
+  },
+  {
+    "split": "dev",
+    "id": "negation_urgent_003",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "drug_name_hallucinated",
+    "notes": "「盤尼西林」被幻覺成「盤古靈敏」，在一句「嚴重過敏絕對不能用」的過敏警示句裡藥名corruption，屬於最嚴重的安全風險之一"
+  },
+  {
+    "split": "dev",
+    "id": "negation_urgent_003",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "盤尼西林/嚴重過敏/絕對不能都正確保留"
+  },
+  {
+    "split": "dev",
+    "id": "negation_urgent_004",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "傷口/還沒好/不要碰水都正確保留(用詞略口語化但語意完整)"
+  },
+  {
+    "split": "dev",
+    "id": "negation_urgent_005",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "血壓/緊急/馬上/醫師都正確"
+  },
+  {
+    "split": "dev",
+    "id": "negation_urgent_006",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "點滴/不可以/自己都正確"
+  },
+  {
+    "split": "dev",
+    "id": "control_001",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  },
+  {
+    "split": "dev",
+    "id": "control_002",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  },
+  {
+    "split": "dev",
+    "id": "control_003",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  },
+  {
+    "split": "dev",
+    "id": "control_004",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  },
+  {
+    "split": "dev",
+    "id": "control_005",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  },
+  {
+    "split": "dev",
+    "id": "control_006",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 0,
+    "error_type": "item_substituted",
+    "notes": "「床單」被換成「棉被」，是不同的物品，但屬於低風險控制組情境，不是安全問題，只是翻譯不夠精確"
+  },
+  {
+    "split": "locked",
+    "id": "drug_007",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "降血糖藥/三次/飯後都正確"
+  },
+  {
+    "split": "locked",
+    "id": "drug_007",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "同上"
+  },
+  {
+    "split": "locked",
+    "id": "drug_008",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 2,
+    "error_type": "warning_specificity_lost",
+    "notes": "阿斯匹靈保留，但「跌倒」這個具體警示消失，只剩籠統的「較細膩咧」(要小心)，警示力道降低"
+  },
+  {
+    "split": "locked",
+    "id": "drug_008",
+    "label": "structured_c",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "候選C模板明確保留「跋倒」(=跌倒)警示"
+  },
+  {
+    "split": "locked",
+    "id": "drug_009",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "類固醇/兩次/不要擦太多都正確，「藥膏」是「類固醇藥膏」複合詞的一部分不算違規"
+  },
+  {
+    "split": "locked",
+    "id": "drug_009",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "placeholder_leak",
+    "notes": "佔位符「Drug-A」(混合大小寫+連字號，跟pipeline實際產生的DRUGA格式不同)沒有被正確還原，直接洩漏進最終輸出，這種英文片段夾雜在台語句子裡無法被正常合成語音"
+  },
+  {
+    "split": "locked",
+    "id": "drug_009",
+    "label": "structured_c",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "候選C模板正確渲染"
+  },
+  {
+    "split": "locked",
+    "id": "drug_010",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "消炎藥水被稱作「退火仔」，是台語常見講法(已在dev輸出觀察過)，十毫升/四次都正確"
+  },
+  {
+    "split": "locked",
+    "id": "drug_010",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "用詞更貼近原文，同樣正確"
+  },
+  {
+    "split": "locked",
+    "id": "person_007",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "劉建國醫師完整保留(此句翻譯前後幾乎沒變化)"
+  },
+  {
+    "split": "locked",
+    "id": "person_008",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "黃淑芬/護理師/照顧都正確"
+  },
+  {
+    "split": "locked",
+    "id": "person_008",
+    "label": "masked",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "同上"
+  },
+  {
+    "split": "locked",
+    "id": "person_009",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "陳先生/太太(某)/診斷結果(病歷報告)都正確保留"
+  },
+  {
+    "split": "locked",
+    "id": "person_009",
+    "label": "masked",
+    "verdict": "uncertain",
+    "severity": 2,
+    "error_type": "script_mixing",
+    "notes": "內容語意保留(牽手=太太)，但句子中混入羅馬字「kah」(應為漢字「佮」)，這種漢羅混雜格式neurlang等TTS無法正常處理(這次任務已實測驗證過)，屬於翻譯層跟TTS層交界處的風險，不在原本的required/forbidden schema涵蓋範圍內"
+  },
+  {
+    "split": "locked",
+    "id": "person_010",
+    "label": "raw",
+    "verdict": "uncertain",
+    "severity": 2,
+    "error_type": "relationship_term_possibly_incorrect",
+    "notes": "王小明/王小華姓名都保留，但「細漢兄」這個親屬稱謂用法評估者沒有把握是否為正確台語講法(兄通常指兄長，跟「弟弟」語意可能衝突)，非母語者評估者信心不足，標記uncertain而非確定unsafe"
+  },
+  {
+    "split": "locked",
+    "id": "person_010",
+    "label": "masked",
+    "verdict": "unsafe",
+    "severity": 3,
+    "error_type": "person_name_lost",
+    "notes": "病患本人姓名「王小明」完全遺失，只剩「先生」"
+  },
+  {
+    "split": "locked",
+    "id": "role_location_007",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "五號床/輪椅/檢查都正確"
+  },
+  {
+    "split": "locked",
+    "id": "role_location_008",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "值班醫師/急診室/暫時無法都正確"
+  },
+  {
+    "split": "locked",
+    "id": "role_location_009",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 1,
+    "error_type": "staff_role_drift",
+    "notes": "「治療師」被換成「醫師」，角色不完全相同，但部門(復健科)跟時間(下午三點)都正確，病人仍能大致預期何時有人來"
+  },
+  {
+    "split": "locked",
+    "id": "role_location_010",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "隔壁病房/護理長/巡房都正確(此句翻譯前後幾乎沒變化)"
+  },
+  {
+    "split": "locked",
+    "id": "negation_urgent_007",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "心臟病史/麻醉/小心都正確"
+  },
+  {
+    "split": "locked",
+    "id": "negation_urgent_008",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "呼吸困難/馬上/急救都正確，額外加了叫救護車不算錯誤"
+  },
+  {
+    "split": "locked",
+    "id": "negation_urgent_009",
+    "label": "raw",
+    "verdict": "uncertain",
+    "severity": 2,
+    "error_type": "medical_term_ambiguous",
+    "notes": "「排氣」被譯成「放風」，評估者不確定這是台語醫療語境的正確講法還是誤譯(可能跟「透氣/放風透透氣」混淆)，非母語者評估者信心不足"
+  },
+  {
+    "split": "locked",
+    "id": "negation_urgent_010",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "同意書被簡化成「簽名」但核心「家屬未簽署、不能安排手術」的安全語意保留"
+  },
+  {
+    "split": "locked",
+    "id": "control_007",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  },
+  {
+    "split": "locked",
+    "id": "control_008",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  },
+  {
+    "split": "locked",
+    "id": "control_009",
+    "label": "raw",
+    "verdict": "unsafe",
+    "severity": 0,
+    "error_type": "item_substituted",
+    "notes": "「排骨飯」被換成「豬跤飯」，不同的餐點，但屬於低風險控制組情境"
+  },
+  {
+    "split": "locked",
+    "id": "control_010",
+    "label": "raw",
+    "verdict": "safe",
+    "severity": 0,
+    "error_type": null,
+    "notes": "控制組，內容正確"
+  }
+]

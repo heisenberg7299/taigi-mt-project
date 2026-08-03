@@ -52,17 +52,10 @@ DRUG_LEXICON = {
     "阿斯匹靈": "a-suh-phit-lîng",
     "類固醇藥膏": None,
     "消炎藥水": None,
-    # locked_v2(2026-08-03新增, 20句全新測試集用)
-    "止痛藥": None,
-    "抗凝血劑": None,
-    "眼藥水": None,
-    "顯影劑": None,
 }
 PERSON_NAMES = {
     "王小明", "陳美惠", "陳太太", "林先生", "林小姐", "張美玲",
     "劉建國", "黃淑芬", "陳先生", "王小華", "李醫師",
-    # locked_v2(2026-08-03新增)
-    "林淑芬", "黃伯伯", "吳文彬", "林志豪",
 }
 
 
@@ -210,18 +203,11 @@ def aggregate_metrics(rows: list[dict], method: str) -> dict:
     }
 
 
-FNAME_BY_WHICH = {
-    "dev": "translation_safety_dev_30.jsonl",
-    "locked": "translation_safety_locked_20.jsonl",
-    "locked_v2": "translation_safety_locked_v2_20.jsonl",
-}
-
-
 def main():
     which = sys.argv[1] if len(sys.argv) > 1 else "dev"
-    assert which in FNAME_BY_WHICH, f"用法: python3 scripts/eval_translation_safety.py [{'|'.join(FNAME_BY_WHICH)}]"
+    assert which in ("dev", "locked"), "用法: python3 scripts/eval_translation_safety.py [dev|locked]"
 
-    fname = FNAME_BY_WHICH[which]
+    fname = "translation_safety_dev_30.jsonl" if which == "dev" else "translation_safety_locked_20.jsonl"
     with open(os.path.join(DATA_DIR, fname), encoding="utf-8") as f:
         sentences = [json.loads(line) for line in f if line.strip()]
 

@@ -1,0 +1,38 @@
+{
+  "no_protection": {
+    "n": 50,
+    "gold_safe_completion_rate": "34/50 = 0.680",
+    "gold_selective_risk_unsafe_pass_rate": "14/50 = 0.280",
+    "gold_uncertain_pass_rate": "2/50 = 0.040",
+    "abstention_rate": "0/50 = 0.000",
+    "coverage(non_abstained)": "50/50 = 1.000",
+    "unresolved_none": 0
+  },
+  "always_mask": {
+    "n": 50,
+    "gold_safe_completion_rate": "32/50 = 0.640",
+    "gold_selective_risk_unsafe_pass_rate": "16/50 = 0.320",
+    "gold_uncertain_pass_rate": "2/50 = 0.040",
+    "abstention_rate": "0/50 = 0.000",
+    "coverage(non_abstained)": "50/50 = 1.000",
+    "unresolved_none": 0
+  },
+  "adaptive_ab": {
+    "n": 50,
+    "gold_safe_completion_rate": "28/50 = 0.560",
+    "gold_selective_risk_unsafe_pass_rate": "6/50 = 0.120",
+    "gold_uncertain_pass_rate": "2/50 = 0.040",
+    "abstention_rate": "14/50 = 0.280",
+    "coverage(non_abstained)": "36/50 = 0.720",
+    "unresolved_none": 0
+  },
+  "adaptive_abc": {
+    "n": 50,
+    "gold_safe_completion_rate": "32/50 = 0.640",
+    "gold_selective_risk_unsafe_pass_rate": "6/50 = 0.120",
+    "gold_uncertain_pass_rate": "2/50 = 0.040",
+    "abstention_rate": "10/50 = 0.200",
+    "coverage(non_abstained)": "40/50 = 0.800",
+    "unresolved_none": 0
+  }
+}
