@@ -1,9 +1,10 @@
-"""Pipeline 主流程: 中文 -> Protected Token 遮罩 -> 翻譯 -> 斷詞/台羅 ->
-正規化/變調 -> TTS -> WAV。"""
+"""Pipeline 主流程: 中文 -> Protected Token 遮罩 -> 翻譯 -> Protected Token
+完整性檢查 -> 台語語意安全檢查 -> 斷詞/台羅 -> 正規化/變調 -> TTS -> WAV。"""
 
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -13,6 +14,34 @@ from .romanize import RomanizationResult, romanize
 from .segment import SegmentationResult, build_segmentation_backend
 from .translate import TranslationResult, build_translation_backend
 from .tts import TTSInput, TTSResult, build_tts_backend
+
+
+def _check_protected_token_integrity(translated_text: str, spans) -> dict:
+    """翻譯完成後檢查每個protected token佔位符還在不在、有沒有被複製。
+
+    mock翻譯backend是決定性的字典替換, 不會弄丟/複製佔位符; 但真實LLM
+    (例如Taigi-Llama)是生成式的, 有可能把佔位符當一般文字改寫、重複輸出、
+    或整個漏掉——這正是 reports/safety_critical_translation_failures.md
+    記錄過的問題模式(藥名被吃掉)的另一種可能形式, 所以獨立成一個檢查,
+    不能只靠最後的unmask_text/unmask_to_tailo round-trip(那個只檢查
+    "有出現的佔位符換得回來", 換不回「翻譯時就已經不見了」這種狀況)。
+    """
+    counts = Counter(_PLACEHOLDER_RE.findall(translated_text))
+    missing = [span.placeholder for span in spans if counts.get(span.placeholder, 0) == 0]
+    duplicated = [span.placeholder for span in spans if counts.get(span.placeholder, 0) > 1]
+    return {"ok": not missing and not duplicated, "missing": missing, "duplicated": duplicated}
+
+
+def _run_safety_checks(zh_text: str, hanji_text: str) -> dict:
+    """套用 scripts/safety_checks.py 既有的四層+陷阱字檢查, 不重新發明一套。
+
+    這些檢查本身有已知的誤報率(見 reports/stage3_safety_checks.md,
+    medical_terms白名單誤報率偏高), 所以預設不會拿來擋下合成, 只記錄結果,
+    要不要fail-closed由 PipelineConfig.require_safety_checks_pass 決定。
+    """
+    from scripts.safety_checks import run_all_checks
+
+    return run_all_checks(zh_text, hanji_text)
 
 
 @dataclass
@@ -26,6 +55,8 @@ class PipelineResult:
     tts: TTSResult
     protected_text_preserved: bool  # 每個protected span的原文是否都完整出現在最終送進TTS的文字裡 (沒有遺失/改序/類型互換)
     protected_pronunciation_enforced: bool  # 是否保證TTS真的用了人工校正過的台羅讀音 (不是backend自己重新推導的發音)
+    protected_token_integrity: dict  # 翻譯完成後佔位符有沒有被LLM弄丟/複製
+    safety_checks: dict  # scripts/safety_checks.py 四層+陷阱字檢查結果 (比對原文zh跟hanji_text)
     warnings: list[str] = field(default_factory=list)
 
     def to_debug_dict(self) -> dict:
@@ -44,6 +75,8 @@ class PipelineResult:
             "hanji_text": self.hanji_text,
             "protected_text_preserved": self.protected_text_preserved,
             "protected_pronunciation_enforced": self.protected_pronunciation_enforced,
+            "protected_token_integrity": self.protected_token_integrity,
+            "safety_checks": self.safety_checks,
             "tts": {
                 "backend": self.tts.backend_name,
                 "model_id": self.tts.model_id,
@@ -92,6 +125,37 @@ class Pipeline:
         # 2. 翻譯 (帶著佔位符送出, 避免翻譯模型動到關鍵資訊)
         translation = self.translation_backend.translate(mask_result.masked_text)
 
+        # 2a. Protected Token 完整性檢查: 翻譯過程(尤其是真實LLM, 生成式、
+        #     非決定性)有沒有把佔位符弄丟或複製
+        protected_token_integrity = _check_protected_token_integrity(
+            translation.translated_text, mask_result.spans
+        )
+        if not protected_token_integrity["ok"]:
+            msg = (
+                f"Protected token在翻譯過程中被弄壞: "
+                f"missing={protected_token_integrity['missing']}, "
+                f"duplicated={protected_token_integrity['duplicated']}"
+            )
+            if self.config.require_protected_token_integrity:
+                raise ValueError(f"{msg}（已阻擋合成, require_protected_token_integrity=True）")
+            warnings.append(msg)
+
+        # 2b. 還原成「原文漢字」版本, 供下面的安全檢查跟neurlang等吃漢字的backend使用。
+        #     刻意在斷詞/正規化之前就算出來, 因為它只依賴translation.translated_text
+        #     + mask_result.spans, 不需要等後面的步驟
+        hanji_text = self.guard.unmask_text(translation.translated_text, mask_result.spans)
+
+        # 2c. 台語語意安全檢查 (否定詞/數字一致性/醫療術語/長度異常/陷阱字),
+        #     比對原文zh_text跟還原後的hanji_text——不是翻譯本身，是翻譯完之後
+        #     的把關層，只會告訴你「這次翻譯可能有問題」，不會自己修正
+        safety_checks = _run_safety_checks(zh_text, hanji_text)
+        failed_checks = [name for name, r in safety_checks.items() if not r["ok"]]
+        if failed_checks:
+            msg = f"台語語意安全檢查未通過: {failed_checks}"
+            if self.config.require_safety_checks_pass:
+                raise ValueError(f"{msg}（已阻擋合成, require_safety_checks_pass=True）")
+            warnings.append(msg)
+
         # 3. 斷詞 + 轉台羅
         segmentation = self.segmentation_backend.segment(translation.translated_text)
         if segmentation.unresolved_words:
@@ -106,25 +170,28 @@ class Pipeline:
         romanization = romanize(segmentation, apply_tone_sandhi=self.config.apply_tone_sandhi)
 
         # 5. 把 Protected Token 佔位符換回人工校正的台羅讀音 (給吃台羅的backend用)
+        #    hanji_text (漢字版本) 已經在步驟2b算過了, 這裡不用重算
         tailo_text = self.guard.unmask_to_tailo(romanization.text, mask_result.spans)
         romanization.text = tailo_text
-
-        # 5b. 同時準備「還原成原文漢字」版本 (給neurlang這類吃漢字+內建phonemizer的backend用)
-        #     不能假設pipeline最後產生的台羅一定能直接餵給任何TTS模型
-        hanji_text = self.guard.unmask_text(translation.translated_text, mask_result.spans)
 
         # 6. TTS 合成
         out_path = self.config.output_dir / out_filename
         tts_input = TTSInput(hanji_text=hanji_text, tailo_text=tailo_text)
         tts_result = self.tts_backend.synthesize(tts_input, out_path)
 
-        # 實際送進這次用的backend的文字 (漢字或台羅, 依tts_result.text_format而定)，
-        # 用來檢查每個protected span的內容是否真的完整出現在裡面，而不是憑空假設
-        # 「呼叫過unmask就等於保留成功」——翻譯/斷詞層若把佔位符弄壞，這裡才抓得到。
-        text_sent_to_tts = hanji_text if tts_result.text_format == "hanji" else tailo_text
-        protected_text_preserved = all(
-            span.original in text_sent_to_tts for span in mask_result.spans
-        )
+        # 每個protected span的內容是否真的完整出現在最終送進TTS的文字裡，而不是
+        # 憑空假設「呼叫過unmask就等於保留成功」——翻譯/斷詞層若把佔位符弄壞，
+        # 這裡才抓得到。注意：漢字版本應該找「原文漢字」(span.original)，台羅
+        # 版本應該找「台羅讀音」(span.tailo，沒有的話unmask_to_tailo會fallback
+        # 回原文漢字，見protected_tokens.py)——不能不分格式都拿中文字去台羅
+        # 字串裡找，那樣永遠找不到(台羅字串裡不會出現中文字)。
+        if tts_result.text_format == "hanji":
+            protected_text_preserved = all(
+                span.original in hanji_text for span in mask_result.spans
+            )
+        else:
+            expected_values = [span.tailo if span.tailo else span.original for span in mask_result.spans]
+            protected_text_preserved = all(val in tailo_text for val in expected_values)
 
         # 發音是否真的受保護: 只有當backend直接消費「人工校正過的台羅讀音」
         # (consumes_verified_pronunciation=True) 且每個藥名都有查到讀音(coverage=100%)
@@ -145,6 +212,8 @@ class Pipeline:
             tts=tts_result,
             protected_text_preserved=protected_text_preserved,
             protected_pronunciation_enforced=protected_pronunciation_enforced,
+            protected_token_integrity=protected_token_integrity,
+            safety_checks=safety_checks,
             warnings=warnings,
         )
 

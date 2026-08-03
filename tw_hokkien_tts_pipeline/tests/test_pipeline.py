@@ -76,6 +76,13 @@ def test_pipeline_end_to_end_mock(tmp_path: Path):
     # 藥名的台羅讀音應該出現在最終合成文字中
     assert "puân-nî-se-lîm" in result.romanization.text
 
+    # MockTTSBackend用的是台羅格式(text_format="tailo")，protected_text_preserved
+    # 要去台羅字串裡找台羅讀音(puân-nî-se-lîm)，不能誤判去找中文字「盤尼西林」
+    # (那樣在純羅馬拼音字串裡永遠找不到，之前接入真實翻譯backend時才發現過這個bug)
+    assert result.tts.text_format == "tailo"
+    assert result.protected_text_preserved is True
+    assert result.protected_token_integrity["ok"] is True
+
 
 def test_pipeline_blocks_when_full_coverage_required(tmp_path: Path):
     config = PipelineConfig(

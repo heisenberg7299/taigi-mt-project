@@ -3,21 +3,27 @@
 華語文字輸入, 經 Protected Token 保護、整句翻譯、斷詞轉台羅、聲調正規化,
 最後合成台語語音的完整流程骨架。
 
-**目前狀態 (2026-08-03)**：翻譯層、斷詞層仍是 mock（示範詞庫，不是真的在
-做這兩件事）；**TTS 層新增了 `NeurlangTTSBackend`，是已驗證能實際出聲的
-正式後端**（沿用 `live_test/tts_backend.py` 同一套已驗證程式碼路徑）。
-也就是說，這次只證實了「pipeline架構 + Protected Token安全機制 + 真實TTS
-串接」可以動，**不能宣稱完整的中文→台語翻譯已經可靠**——翻譯/斷詞層換成
-真的東西前，最終輸出的台語內容品質仍等同於示範詞庫的程度。
+**目前狀態 (2026-08-03)**：**斷詞層仍是 mock**（示範詞庫，不是真的在做斷詞/
+轉台羅）；**翻譯層跟TTS層都已經接上正式後端**——`TaigiLlamaTranslationBackend`
+（透過本機Ollama）跟`NeurlangTTSBackend`（沿用`live_test/tts_backend.py`
+同一套已驗證程式碼路徑），兩個都能實際跑出真的翻譯/真的語音。**但這不代表
+輸出內容安全可信**：Taigi-Llama只當baseline，實測過10句非測試集句子有4句
+出現safety-critical等級的語意流失（見
+`reports/safety_critical_translation_failures.md`），所以翻譯完成後
+額外加了Protected Token完整性檢查+台語語意安全檢查(見下方)當把關層，
+預設只記錄警告不阻擋，要fail-closed需自己開config開關。斷詞層還是示範
+詞庫，會限制實際能正確轉出台羅的詞彙量。
 
 ```
 中文輸入
   -> Protected Token 遮罩 (保護藥名/人名/劑量)
-  -> 台語整句翻譯 (translate.py)                    [目前: mock]
-  -> 台語斷詞 + 漢字轉台羅 (segment.py)              [目前: mock]
+  -> 台語整句翻譯 (translate.py)          [taigi_llama: 已驗證能實際翻譯, 只當baseline]
+  -> Protected Token 完整性檢查            [檢查佔位符有沒有被LLM弄丟/複製]
+  -> 台語語意安全檢查                      [scripts/safety_checks.py 既有四層+陷阱字]
+  -> 台語斷詞 + 漢字轉台羅 (segment.py)    [目前: mock]
   -> 台羅正規化 + 連讀變調 (romanize.py，變調預設關閉)
   -> Protected Token 還原：台羅讀音 + 原文漢字兩種都保留
-  -> TTS 合成 (tts.py)                              [neurlang: 已驗證真實出聲]
+  -> TTS 合成 (tts.py)                    [neurlang: 已驗證真實出聲]
   -> WAV 語音輸出
 ```
 
@@ -34,18 +40,20 @@ TTS層會同時拿到「翻譯後台語漢字」跟「正規化台羅」兩種�
 ```
 tw_hokkien_tts_pipeline/
   __init__.py          套件進入點
-  config.py             PipelineConfig: 選擇 mock/neurlang/real 後端與輸出設定
+  config.py             PipelineConfig: 選擇 mock/taigi_llama/neurlang/real 後端與安全開關
   protected_tokens.py    藥名/人名/劑量的遮罩與還原
-  translate.py           TranslationBackend 介面 (Mock + HTTP 骨架)
+  translate.py           TranslationBackend 介面 (Mock + Taigi-Llama已驗證 + HTTP骨架)
   segment.py              SegmentationBackend 介面 (Mock 斷詞/轉台羅)
   romanize.py             台羅正規化 + 簡化版連讀變調 (預設關閉)
   tts.py                  TTSBackend 介面 (Mock WAV + Neurlang已驗證 + SpeechT5骨架)
   audio_metrics.py         讀取wav檔量測時長/非靜音比例/NaN/全零等品質指標
-  pipeline.py              串接以上各層的主流程
+  pipeline.py              串接以上各層的主流程, 含Protected Token完整性/安全檢查
   cli.py                    命令列介面
   tests/
-    test_pipeline.py            pytest 測試 (7 項, 針對mock流程的回歸測試)
-    test_tts_neurlang_smoke.py  真實TTS smoke test (需要neurlang模型權重才會跑, 否則自動skip)
+    test_pipeline.py                       pytest 測試 (7 項, 針對mock流程的回歸測試)
+    test_protected_tokens_integrity.py     多個同類Protected Token的完整性測試 (5項)
+    test_translate_taigi_llama_smoke.py    真實翻譯 smoke test (需要Ollama在跑, 否則自動skip)
+    test_tts_neurlang_smoke.py             真實TTS smoke test (需要neurlang模型權重才會跑, 否則自動skip)
 ```
 
 跟這個repo其他部分的關係：`live_test/`(neurlang+MERaLiON)是已驗證能實際
@@ -60,26 +68,57 @@ tw_hokkien_tts_pipeline/
 pip install -r tw_hokkien_tts_pipeline/requirements.txt
 python3 -m pytest tw_hokkien_tts_pipeline/tests/ -v
 
-# 全部mock(預設，快，提示音不是真的語音)
+# 全部mock(預設，快，示範詞庫+提示音，都不是真的)
 python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林。" \
   --output-dir ./pipeline_output
 
-# TTS層用真實的neurlang(需要 transformers<5 + models/neurlang-vits-suisiann/ 權重)
+# 翻譯用真實的Taigi-Llama(需要 ollama serve 且已pull過模型)
 python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林。" \
-  --tts-backend neurlang --output-dir ./pipeline_output
+  --translation-backend taigi_llama --output-dir ./pipeline_output
+
+# 翻譯+TTS都用真的(斷詞仍是mock)
+python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林。" \
+  --translation-backend taigi_llama --tts-backend neurlang --output-dir ./pipeline_output
 ```
 
 會在輸出資料夾產生 `output.wav` 與 `output.debug.json` (每個階段的中間結果,
 方便定位問題出在翻譯、斷詞、拼音還是語音合成；`tts`欄位另外記錄backend名稱、
-模型ID、實際送進模型的文字格式、推論時間、音檔時長、非靜音比例)。
+模型ID、實際送進模型的文字格式、推論時間、音檔時長、非靜音比例；
+`protected_token_integrity`/`safety_checks`欄位記錄翻譯完成後的把關結果)。
+
+## 翻譯完成後的把關層
+
+真實LLM翻譯(生成式、非決定性)跟mock翻譯(決定性字典替換)不一樣，有可能把
+Protected Token佔位符當一般文字改寫、複製、或整個漏掉——這是
+`reports/safety_critical_translation_failures.md`記錄過的問題模式(藥名被
+吃掉)的另一種可能形式。所以`pipeline.py`在翻譯完成、斷詞之前, 插入兩層
+檢查:
+
+1. **Protected Token完整性檢查**：用`Counter`比對每個佔位符在翻譯前後的
+   出現次數，抓missing(翻譯完不見了)跟duplicated(被重複輸出)兩種問題。
+2. **台語語意安全檢查**：直接重用`scripts/safety_checks.py`既有的四層+
+   陷阱字檢查(否定詞/數字一致性/醫療術語白名單/長度異常/語意反轉陷阱字)，
+   不重新發明一套，比對原文zh_text跟還原後的hanji_text。
+
+兩者預設都**只記錄進debug trace的warnings，不阻擋合成**——這些檢查本身
+有已知誤報率(見`reports/stage3_safety_checks.md`，medical_terms白名單
+誤報率偏高)，預設關閉避免過度阻擋。要fail-closed(檢查沒過就直接
+`raise ValueError`擋下合成)，用CLI的`--require-safety-checks`，或
+`PipelineConfig(require_protected_token_integrity=True, require_safety_checks_pass=True)`。
 
 ## 目前是 mock, 換成真實後端前要做的事
 
 ### 1. 翻譯層 (`translate.py`)
 - `MockTranslationBackend` 只用一個十幾個詞的示範詞庫做替換, **不是真的翻譯**。
-- 換成真實 API 前, 逐一確認:
-  - Lohankha / 教育部翻譯器 / Taigi AI Labs 是否真的開放 API (目前 Taigi AI Labs
-    官方表示沒有免費 API), 以及自動化呼叫是否符合服務條款
+- **`TaigiLlamaTranslationBackend` 已驗證能實際翻譯**，透過本機Ollama呼叫
+  Taigi-Llama-2-Translator-7B，跟`live_test/app.py`同一套已驗證prompt格式/
+  stop token。**只當baseline，不代表結果安全可信**——實測過10句非測試集
+  句子有4句出現safety-critical等級的語意流失(藥名被整個吃掉、病人姓名被
+  丟掉只剩姓)，見`reports/safety_critical_translation_failures.md`。授權
+  CC-BY-NC-SA-4.0(非商業限制)，只能研究/內部評估用。
+- 若要換成其他真實API(Lohankha / 教育部翻譯器 / Taigi AI Labs等)前, 逐一確認:
+  - 是否真的開放API (目前 Taigi AI Labs 官方表示沒有免費 API), 以及自動化
+    呼叫是否符合服務條款
   - 輸入輸出格式 (台語漢字? 台羅? 白話字?)
   - 費用、流量限制
   - 醫療內容送到第三方服務的隱私政策疑慮
@@ -176,9 +215,13 @@ neurlang版本/替代模型出現。
 
 ## 已知限制
 
-- **翻譯/斷詞層仍是mock**：詞庫只有十幾個示範詞, 真實句子大部分字詞會
-  fallback 成原字。這代表就算TTS層用neurlang真的出聲了, 講出來的內容品質
-  仍等同示範詞庫程度, **不是真正可用的中文→台語翻譯**。
+- **斷詞層仍是mock**：詞庫只有十幾個示範詞, 真實句子大部分字詞會fallback
+  成原字/查無台羅讀音，`unresolved_count`/`mean_confidence`會反映出來。
+- **翻譯層(`TaigiLlamaTranslationBackend`)已經是真的在翻譯，但只當baseline，
+  不代表結果安全可信**：實測過10句非測試集句子有4句出現safety-critical
+  等級的語意流失。pipeline.py新增的Protected Token完整性檢查+台語語意
+  安全檢查是把關層，能抓到「這次翻譯可能有問題」，但**不會自動修正**，
+  預設也不會阻擋合成(見上方「翻譯完成後的把關層」)。
 - 連讀變調預設關閉 (`apply_tone_sandhi=False`)，且就算開啟也只在數字調格式
   上運作，詞庫本身的 diacritic 讀音是no-op。
 - `MockTTSBackend` 輸出只是提示音, 不是真人語音。
