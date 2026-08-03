@@ -5,10 +5,18 @@
 
 ## 目前狀態
 
-- 階段0-3已有實際產出：200句測試集、兩個真跑過的 baseline（辭典最長詞匹配 / Taigi-Llama-2-Translator-7B）、
-  量化比較報告（[`reports/stage2_baseline_comparison.md`](./reports/stage2_baseline_comparison.md)）、
-  安全檢查層腳本與結果（[`reports/stage3_safety_checks.md`](./reports/stage3_safety_checks.md)）
-- 母語者驗證平台已上線，見下方
+- **翻譯**：以開源 Taigi-Llama-2-Translator-7B 當baseline，在200句精選測試集上表現不錯
+  （量化比較見 [`reports/stage2_baseline_comparison.md`](./reports/stage2_baseline_comparison.md)）。
+  但額外測試10句**不在**測試集裡的新句子後發現：**40%出現嚴重語意流失，其中包含
+  醫療安全等級的風險**（例如藥名整個消失）——這是目前最重要的風險發現，已有初步
+  解法原型（Protected Token機制），但還沒到能保證100%可靠的程度。詳見
+  [`reports/safety_critical_translation_failures.md`](./reports/safety_critical_translation_failures.md)
+- **語音合成**：主力用 neurlang VITS（快、CPU可即時），另外實測過
+  MERaLiON-OmniVoice-Hokkien-TTS（品質較好，但比即時慢約35倍，適合離線生成、
+  不適合即時互動）。完整候選比較見 [`reports/stage4_tts_candidates.md`](./reports/stage4_tts_candidates.md)
+- **母語者驗證平台已上線**：邀請台語母語者對翻譯候選逐句打分，24小時可用，見下方
+- **開發者測試playground**：可以當場輸入任意中文句子、即時聽到台語語音輸出、
+  比較不同TTS引擎，見下方「開發者即時測試工具」
 
 ## 母語者驗證平台
 
