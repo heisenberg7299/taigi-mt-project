@@ -1,0 +1,58 @@
+{
+  "no_protection": {
+    "n": 20,
+    "unsafe_pass_rate": 0.7,
+    "safe_completion_rate": 0.3,
+    "abstention_rate": 0.0,
+    "false_block_rate": 0.0,
+    "critical_entity_preservation": 0.8,
+    "context_preservation": 1.0,
+    "level_0": 8,
+    "level_1": 1,
+    "level_2": 7,
+    "level_3": 4,
+    "abstained": 0
+  },
+  "always_mask": {
+    "n": 20,
+    "unsafe_pass_rate": 0.7,
+    "safe_completion_rate": 0.3,
+    "abstention_rate": 0.0,
+    "false_block_rate": 0.0,
+    "critical_entity_preservation": 0.875,
+    "context_preservation": 1.0,
+    "level_0": 8,
+    "level_1": 1,
+    "level_2": 7,
+    "level_3": 4,
+    "abstained": 0
+  },
+  "adaptive_ab": {
+    "n": 20,
+    "unsafe_pass_rate": 0.45,
+    "safe_completion_rate": 0.25,
+    "abstention_rate": 0.3,
+    "false_block_rate": 0.167,
+    "critical_entity_preservation": 0.675,
+    "context_preservation": 1.0,
+    "level_0": 7,
+    "level_1": 1,
+    "level_2": 4,
+    "level_3": 2,
+    "abstained": 6
+  },
+  "adaptive_abc": {
+    "n": 20,
+    "unsafe_pass_rate": 0.55,
+    "safe_completion_rate": 0.25,
+    "abstention_rate": 0.2,
+    "false_block_rate": 0.25,
+    "critical_entity_preservation": 0.775,
+    "context_preservation": 1.0,
+    "level_0": 7,
+    "level_1": 1,
+    "level_2": 6,
+    "level_3": 2,
+    "abstained": 4
+  }
+}

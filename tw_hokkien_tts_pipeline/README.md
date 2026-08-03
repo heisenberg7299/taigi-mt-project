@@ -156,6 +156,33 @@ Protected Token佔位符當一般文字改寫、複製、或整個漏掉——�
   「敢會」(疑問句形式，語法上不一定需要顯式否定標記)則還沒修，是更細緻的
   文法規則問題，不是簡單加關鍵字能解決的。
 
+## 候選C：StructuredMedicalRenderer + 50句四方法比較 (2026-08-03)
+
+用50句新建的結構化標註資料集(5類x10句，分層切30句dev+20句locked，見
+`tests/data/`)正式比較四種翻譯安全策略：No protection / Always mask /
+Adaptive A-B / **Adaptive A-B+C**。候選C(`structured_renderer.py`的
+`StructuredMedicalRenderer`)是A、B都失敗後，針對已支援的高風險intent
+(`addressing_patient`/`request_staff`/`medication_reminder`)用人工審核
+模板生成，不靠LLM生成，保證結構化欄位(人名/位置/職稱/藥名/劑量)100%正確。
+
+人名保護也重新設計(`person_records.py`)：不再靠LLM保留佔位符，句首是
+「已知病患姓名+稱謂,」這種呼格用法時，姓名整段完全不送進LLM，翻譯完
+確定性接回句首——姓名保證100%正確，剩下的句子才交給翻譯backend。
+
+**核心量化發現**（完整方法論、每個指標定義、dev/locked紀律見
+`reports/translation_safety_4method_comparison.md`，不在這裡重複）：
+Protected Token的「文字完整性」不能拿來當「整句語意安全」的替代指標——
+locked set上90%的遮罩候選佔位符完整還原，但其中只有33.3%整句語意也真的
+安全，即**66.7%的情況「token完整、句子仍不安全」**。也誠實記錄了一次
+locked set的「不理想結果」（Adaptive A/B+C的unsafe pass rate在locked set
+上比A/B還差）並依照pre-registration紀律沒有回頭修規則重跑——追查原因是
+評分方法論(required/forbidden meanings的同義詞覆蓋)不夠完整，不是系統
+邏輯錯誤，但這就是鎖定測試的意義：暴露dev set調整時看不到的問題。
+
+新增`test_structured_fallback.py`(9項)涵蓋呼格判斷、候選C模板渲染、
+A→B→C→fail closed完整順序，跟`scripts/eval_translation_safety.py`
+(可重跑`dev`或`locked`模式的評估腳本)。
+
 ## 目前是 mock, 換成真實後端前要做的事
 
 ### 1. 翻譯層 (`translate.py`)

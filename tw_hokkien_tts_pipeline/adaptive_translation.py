@@ -90,10 +90,14 @@ class AdaptiveTranslationResult:
 class UnsafeTranslationError(Exception):
     """雙路候選都沒通過檢查, 已阻擋合成。"""
 
-    def __init__(self, zh_text: str, raw_candidate: AdaptiveCandidate, masked_candidate: AdaptiveCandidate):
+    def __init__(
+        self, zh_text: str, raw_candidate: AdaptiveCandidate, masked_candidate: AdaptiveCandidate,
+        mask_result: MaskResult | None = None,
+    ):
         self.zh_text = zh_text
         self.raw_candidate = raw_candidate
         self.masked_candidate = masked_candidate
+        self.mask_result = mask_result
         super().__init__(
             f"雙路翻譯都未通過檢查, 已阻擋合成: {zh_text!r}\n"
             f"  候選A(原文): entities_ok={raw_candidate.entities_ok}"
@@ -158,4 +162,36 @@ def translate_adaptive(
             translation_backend_name=translation_backend.name,
         )
 
-    raise UnsafeTranslationError(zh_text, raw_candidate, masked_candidate)
+    raise UnsafeTranslationError(zh_text, raw_candidate, masked_candidate, mask_result=mask_result)
+
+
+def translate_with_structured_fallback(
+    zh_text: str,
+    guard: ProtectedTokenGuard,
+    translation_backend: TranslationBackend,
+    structured_intent=None,
+    structured_renderer=None,
+) -> AdaptiveTranslationResult:
+    """A -> B -> C -> fail closed。
+
+    候選A(原文)、候選B(遮罩)沿用 translate_adaptive()；兩者都失敗時，
+    只有這句話的 structured_intent 屬於 structured_renderer 支援的範圍
+    (見 structured_renderer.py 的 SUPPORTED_INTENTS)才會用候選C(人工審核
+    模板)。三者都無法安全處理時, 原本的 UnsafeTranslationError 會照樣往外
+    丟, 不會被吞掉——候選C只是多一條路, 不是把fail closed的門檻降低。
+    """
+    try:
+        return translate_adaptive(zh_text, guard, translation_backend)
+    except UnsafeTranslationError as e:
+        if structured_renderer is not None and structured_renderer.can_handle(structured_intent):
+            hanji_text = structured_renderer.render(structured_intent, translation_backend)
+            return AdaptiveTranslationResult(
+                zh_text=zh_text,
+                mask_result=e.mask_result,
+                raw_candidate=e.raw_candidate,
+                masked_candidate=e.masked_candidate,
+                chosen="structured_c",
+                hanji_text=hanji_text,
+                translation_backend_name=translation_backend.name,
+            )
+        raise
