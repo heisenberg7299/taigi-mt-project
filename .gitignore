@@ -33,3 +33,6 @@ tunnel_watchdog.log
 live_test_neurlang.log
 live_test_meralion.log
 live_test_gateway.log
+
+# tw_hokkien_tts_pipeline CLI/測試執行期產生的輸出(wav+debug json)
+pipeline_output/

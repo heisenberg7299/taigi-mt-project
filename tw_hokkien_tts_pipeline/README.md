@@ -1,41 +1,52 @@
 # 中文 -> 台語 TTS Pipeline (骨架版)
 
 華語文字輸入, 經 Protected Token 保護、整句翻譯、斷詞轉台羅、聲調正規化,
-最後合成台語語音的完整流程骨架。目前所有外部依賴 (翻譯 API、斷詞工具、
-TTS 模型) 都提供 **mock 版本**, 可以離線直接跑通整條 pipeline 並通過測試;
-真實後端需依下方說明自行串接。
+最後合成台語語音的完整流程骨架。
+
+**目前狀態 (2026-08-03)**：翻譯層、斷詞層仍是 mock（示範詞庫，不是真的在
+做這兩件事）；**TTS 層新增了 `NeurlangTTSBackend`，是已驗證能實際出聲的
+正式後端**（沿用 `live_test/tts_backend.py` 同一套已驗證程式碼路徑）。
+也就是說，這次只證實了「pipeline架構 + Protected Token安全機制 + 真實TTS
+串接」可以動，**不能宣稱完整的中文→台語翻譯已經可靠**——翻譯/斷詞層換成
+真的東西前，最終輸出的台語內容品質仍等同於示範詞庫的程度。
 
 ```
 中文輸入
   -> Protected Token 遮罩 (保護藥名/人名/劑量)
-  -> 台語整句翻譯 (translate.py)
-  -> 台語斷詞 + 漢字轉台羅 (segment.py)
-  -> 台羅正規化 + 連讀變調 (romanize.py)
-  -> Protected Token 還原為台羅讀音
-  -> TTS 合成 (tts.py)
+  -> 台語整句翻譯 (translate.py)                    [目前: mock]
+  -> 台語斷詞 + 漢字轉台羅 (segment.py)              [目前: mock]
+  -> 台羅正規化 + 連讀變調 (romanize.py，變調預設關閉)
+  -> Protected Token 還原：台羅讀音 + 原文漢字兩種都保留
+  -> TTS 合成 (tts.py)                              [neurlang: 已驗證真實出聲]
   -> WAV 語音輸出
 ```
+
+TTS層會同時拿到「翻譯後台語漢字」跟「正規化台羅」兩種格式，由backend自己
+選——neurlang訓練時吃的是漢字（內建phonemizer自動轉IPA），不能假設pipeline
+最後產生的台羅字串一定能直接餵給任何TTS模型。
 
 ## 檔案結構
 
 ```
 tw_hokkien_tts_pipeline/
   __init__.py          套件進入點
-  config.py             PipelineConfig: 選擇 mock/real 後端與輸出設定
+  config.py             PipelineConfig: 選擇 mock/neurlang/real 後端與輸出設定
   protected_tokens.py    藥名/人名/劑量的遮罩與還原
   translate.py           TranslationBackend 介面 (Mock + HTTP 骨架)
   segment.py              SegmentationBackend 介面 (Mock 斷詞/轉台羅)
-  romanize.py             台羅正規化 + 簡化版連讀變調
-  tts.py                  TTSBackend 介面 (Mock WAV + SpeechT5 骨架)
+  romanize.py             台羅正規化 + 簡化版連讀變調 (預設關閉)
+  tts.py                  TTSBackend 介面 (Mock WAV + Neurlang已驗證 + SpeechT5骨架)
+  audio_metrics.py         讀取wav檔量測時長/非靜音比例/NaN/全零等品質指標
   pipeline.py              串接以上各層的主流程
   cli.py                    命令列介面
   tests/
-    test_pipeline.py       pytest 測試 (7 項, 全部針對 mock 流程)
+    test_pipeline.py            pytest 測試 (7 項, 針對mock流程的回歸測試)
+    test_tts_neurlang_smoke.py  真實TTS smoke test (需要neurlang模型權重才會跑, 否則自動skip)
 ```
 
 跟這個repo其他部分的關係：`live_test/`(neurlang+MERaLiON)是已驗證能實際
-出聲的保底方案，這個資料夾是另一條探索中的架構，目前所有backend都是mock，
-還沒接上任何真實模型。
+出聲的保底方案，這個資料夾是另一條探索中的架構——TTS層現在也能用同一個
+已驗證的neurlang模型出聲，但翻譯/斷詞層還是mock，不是完整替代方案。
 
 ## 快速執行
 
@@ -45,12 +56,18 @@ tw_hokkien_tts_pipeline/
 pip install -r tw_hokkien_tts_pipeline/requirements.txt
 python3 -m pytest tw_hokkien_tts_pipeline/tests/ -v
 
+# 全部mock(預設，快，提示音不是真的語音)
 python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林。" \
   --output-dir ./pipeline_output
+
+# TTS層用真實的neurlang(需要 transformers<5 + models/neurlang-vits-suisiann/ 權重)
+python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林。" \
+  --tts-backend neurlang --output-dir ./pipeline_output
 ```
 
 會在輸出資料夾產生 `output.wav` 與 `output.debug.json` (每個階段的中間結果,
-方便定位問題出在翻譯、斷詞、拼音還是語音合成)。
+方便定位問題出在翻譯、斷詞、拼音還是語音合成；`tts`欄位另外記錄backend名稱、
+模型ID、實際送進模型的文字格式、推論時間、音檔時長、非靜音比例)。
 
 ## 目前是 mock, 換成真實後端前要做的事
 
@@ -81,15 +98,24 @@ python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林�
 
 ### 4. TTS 層 (`tts.py`)
 - `MockTTSBackend` 只產生固定音高的提示音, 用來驗證檔案輸出流程, **不是真的語音**。
-- `SpeechT5TailoBackend` 是串接骨架, 需要:
+- **`NeurlangTTSBackend` 已驗證能實際出聲**, 沿用 `live_test/tts_backend.py`
+  同一套已驗證程式碼路徑 (`TTS.utils.synthesizer.Synthesizer`)。用法：
+  ```bash
+  pip install coqui-tts[codec] "transformers<5"   # 跟MERaLiON要的>=5.3.0互斥
+  ```
+  輸入格式固定用**台語漢字**（`TTSInput.hanji_text`），不是台羅——模型內建
+  pygoruut phonemizer 自己轉IPA。模型權重路徑預設是
+  `models/neurlang-vits-suisiann/`（跟`live_test/`同一份），可用
+  `PipelineConfig.neurlang_model_dir` 覆寫。模型權重不存在或套件版本不對時
+  會直接丟出 `FileNotFoundError`/`ImportError`，**不會fallback成mock**。
+- `SpeechT5TailoBackend` 是串接骨架, **尚未實際驗證過**, 需要:
   ```bash
   pip install transformers torch soundfile sentencepiece
   ```
   並且務必先看清楚目標模型 (例如 `Curiousfox/speecht5_tailo-hokkien_ver1.0.b`)
   的 model card, 確認輸入格式與 speaker embedding 需求, 骨架中的隨機 speaker
-  embedding 只是佔位, 正式使用前要換成合適的值。
-- 其他可考慮的替代方案: 改接受台羅/IPA 輸入的 Coqui VITS、Neurlang 台語 VITS,
-  或其他有正式 API 的台語 TTS 服務。
+  embedding 只是佔位, 正式使用前要換成合適的值。這個backend用台羅
+  (`TTSInput.tailo_text`)。
 
 ## 醫療安全設計
 
@@ -102,11 +128,17 @@ python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林�
 - `drug_lexicon` 的值務必由台語專業人士確認過再放進去, 這個 repo 本身**不**
   內建任何未經審核的醫療發音資料, 範例詞庫僅供串接測試。
 
-## 已知限制 (mock 版本)
+## 已知限制
 
-- 翻譯/斷詞詞庫只有十幾個示範詞, 真實句子大部分字詞會 fallback 成原字。
-- 連讀變調只在數字調格式上運作, 詞庫本身的 diacritic 讀音未套用變調。
-- TTS 輸出只是提示音, 不是真人語音。
+- **翻譯/斷詞層仍是mock**：詞庫只有十幾個示範詞, 真實句子大部分字詞會
+  fallback 成原字。這代表就算TTS層用neurlang真的出聲了, 講出來的內容品質
+  仍等同示範詞庫程度, **不是真正可用的中文→台語翻譯**。
+- 連讀變調預設關閉 (`apply_tone_sandhi=False`)，且就算開啟也只在數字調格式
+  上運作，詞庫本身的 diacritic 讀音是no-op。
+- `MockTTSBackend` 輸出只是提示音, 不是真人語音。
 - `HTTPTranslationBackend` / `SpeechT5TailoBackend` 是可運作的骨架, 但沒有
   對應任何一個已驗證存在的正式 API/模型端點, 使用前一定要照上面的步驟自行
   串接與驗證。
+- `NeurlangTTSBackend` 已驗證能實際出聲，但沿用的是neurlang本身既有的限制
+  （見 `reports/tts_oov_audit.md`）：送氣/鼻化符號(ʰ/ã/ĩ等)會被內建
+  phonemizer丟棄，這是模型詞彙表本身的問題，不是這次串接造成的。

@@ -12,7 +12,7 @@ from .protected_tokens import ProtectedTokenGuard
 from .romanize import RomanizationResult, romanize
 from .segment import SegmentationResult, build_segmentation_backend
 from .translate import TranslationResult, build_translation_backend
-from .tts import TTSResult, build_tts_backend
+from .tts import TTSInput, TTSResult, build_tts_backend
 
 
 @dataclass
@@ -22,6 +22,7 @@ class PipelineResult:
     translation: TranslationResult
     segmentation: SegmentationResult
     romanization: RomanizationResult
+    hanji_text: str  # 翻譯後台語漢字, Protected Token 已還原成原文寫法 (供 neurlang 等吃漢字的 backend 使用)
     tts: TTSResult
     warnings: list[str] = field(default_factory=list)
 
@@ -38,8 +39,18 @@ class PipelineResult:
             "romanized_text": self.romanization.text,
             "unresolved_count": self.romanization.unresolved_count,
             "mean_confidence": self.romanization.mean_confidence,
-            "tts_backend": self.tts.backend_name,
-            "wav_path": str(self.tts.wav_path),
+            "hanji_text": self.hanji_text,
+            "tts": {
+                "backend": self.tts.backend_name,
+                "model_id": self.tts.model_id,
+                "text_sent_to_model": self.tts.text,
+                "text_format": self.tts.text_format,
+                "inference_sec": self.tts.inference_sec,
+                "duration_sec": self.tts.duration_sec,
+                "non_silence_ratio": self.tts.non_silence_ratio,
+                "sample_rate": self.tts.sample_rate,
+                "wav_path": str(self.tts.wav_path),
+            },
             "warnings": self.warnings,
         }
 
@@ -85,15 +96,20 @@ class Pipeline:
                 warnings.append(f"斷詞後查無台羅讀音, 已用原字 fallback: {surfaces}")
 
         # 4. 台羅正規化
-        romanization = romanize(segmentation)
+        romanization = romanize(segmentation, apply_tone_sandhi=self.config.apply_tone_sandhi)
 
-        # 5. 把 Protected Token 佔位符換回人工校正的台羅讀音
-        final_text = self.guard.unmask_to_tailo(romanization.text, mask_result.spans)
-        romanization.text = final_text
+        # 5. 把 Protected Token 佔位符換回人工校正的台羅讀音 (給吃台羅的backend用)
+        tailo_text = self.guard.unmask_to_tailo(romanization.text, mask_result.spans)
+        romanization.text = tailo_text
+
+        # 5b. 同時準備「還原成原文漢字」版本 (給neurlang這類吃漢字+內建phonemizer的backend用)
+        #     不能假設pipeline最後產生的台羅一定能直接餵給任何TTS模型
+        hanji_text = self.guard.unmask_text(translation.translated_text, mask_result.spans)
 
         # 6. TTS 合成
         out_path = self.config.output_dir / out_filename
-        tts_result = self.tts_backend.synthesize(final_text, out_path)
+        tts_input = TTSInput(hanji_text=hanji_text, tailo_text=tailo_text)
+        tts_result = self.tts_backend.synthesize(tts_input, out_path)
 
         result = PipelineResult(
             source_text=zh_text,
@@ -101,6 +117,7 @@ class Pipeline:
             translation=translation,
             segmentation=segmentation,
             romanization=romanization,
+            hanji_text=hanji_text,
             tts=tts_result,
             warnings=warnings,
         )

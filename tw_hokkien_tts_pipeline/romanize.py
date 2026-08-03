@@ -75,11 +75,15 @@ def apply_tone_sandhi_numbered(syllables: list[str]) -> list[str]:
     return result
 
 
-def romanize(segmentation: SegmentationResult) -> RomanizationResult:
+def romanize(segmentation: SegmentationResult, apply_tone_sandhi: bool = False) -> RomanizationResult:
     """把斷詞結果轉成最終要送進 TTS 的台羅字串。
 
     未解析的詞 (含 Protected Token 佔位符) 直接保留原文 surface, 交由
     pipeline 後續的 unmask_to_tailo 或人工檢查處理; 這裡不假裝猜測發音。
+
+    apply_tone_sandhi 預設 False：連讀變調規則(見上方模組docstring)只是
+    簡化版demo, 且只對「數字調」音節有效, 詞庫目前多是diacritic格式(不受影響)。
+    開啟前應先由台語語言學背景的人確認規則是否適用於目標腔調。
     """
     words: list[RomanizedWord] = []
     parts: list[str] = []
@@ -91,6 +95,9 @@ def romanize(segmentation: SegmentationResult) -> RomanizationResult:
         else:
             words.append(RomanizedWord(surface=w.surface, tailo=w.surface, resolved=False))
             parts.append(w.surface)
+
+    if apply_tone_sandhi:
+        parts = apply_tone_sandhi_numbered(parts)
 
     text = "-".join(p for p in parts if p and p != "。")
     if any(w.surface == "。" for w in segmentation.words):

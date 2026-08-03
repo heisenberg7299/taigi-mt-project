@@ -23,15 +23,22 @@ def main() -> None:
         "--output-dir", default="./pipeline_output", help="輸出資料夾"
     )
     parser.add_argument(
-        "--real", action="store_true", help="使用真實後端 (需先完成 API/模型串接)"
+        "--real", action="store_true",
+        help="翻譯+斷詞也一併切成 real 後端 (尚未實作, 會丟例外; TTS層請用 --tts-backend)",
+    )
+    parser.add_argument(
+        "--tts-backend", choices=["mock", "neurlang", "real"], default=None,
+        help="只切換TTS層要用哪個後端: mock(預設,提示音) / neurlang(已驗證能實際出聲) / "
+             "real(speecht5_tailo骨架,尚未驗證)。翻譯/斷詞層不受影響, 目前只有mock可用",
     )
     args = parser.parse_args()
 
     backend_mode = "real" if args.real else "mock"
+    tts_mode = args.tts_backend if args.tts_backend else backend_mode
     config = PipelineConfig(
         translation_backend=backend_mode,
         segmentation_backend=backend_mode,
-        tts_backend=backend_mode,
+        tts_backend=tts_mode,
         output_dir=args.output_dir,
     )
 
