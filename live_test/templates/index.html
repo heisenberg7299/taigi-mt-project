@@ -7,24 +7,33 @@
   <style>
     body { font-family: -apple-system, "PingFang TC", sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
     h1 { font-size: 1.3em; }
+    h2 { font-size: 1em; margin-top: 20px; }
     textarea { width: 100%; font-size: 1.1em; padding: 10px; box-sizing: border-box; }
-    .backends { margin: 12px 0; }
-    .backends label { display: block; padding: 8px 12px; margin-bottom: 6px; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; }
-    .backends input { margin-right: 8px; }
+    .backends, .strategies { margin: 12px 0; }
+    .backends label, .strategies label { display: block; padding: 8px 12px; margin-bottom: 6px; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; }
+    .backends input, .strategies input { margin-right: 8px; }
     button { margin-top: 10px; font-size: 1em; padding: 8px 20px; cursor: pointer; }
     .result { margin-top: 24px; padding: 16px; background: #f5f5f5; border-radius: 8px; }
     .result .zh { color: #666; }
     .result .han { font-size: 1.3em; margin: 8px 0; }
     .result .backend-used { color: #666; font-size: 0.9em; }
+    .adaptive-info { margin-top: 12px; padding: 10px; background: #e8f0fe; border-radius: 6px; font-size: 0.9em; }
+    .adaptive-info .chosen { font-weight: bold; }
+    .blocked { margin-top: 24px; padding: 16px; background: #fdecea; border: 1px solid #f5c6cb; border-radius: 8px; }
+    .blocked .title { font-weight: bold; color: #c0392b; }
+    .blocked .candidate { margin-top: 8px; font-size: 0.9em; }
     .error { margin-top: 24px; color: #c00; }
     audio { width: 100%; margin-top: 8px; }
+    .hint { color: #888; font-size: 0.85em; }
   </style>
 </head>
 <body>
   <h1>中文 &rarr; 台語 即時測試</h1>
-  <p>輸入任意中文句子，選一個語音引擎，跑完整pipeline（Taigi-Llama翻譯 + 語音合成）。</p>
+  <p>輸入任意中文句子，選一個語音引擎+翻譯策略，跑完整pipeline。</p>
   <form method="post">
     <textarea name="zh" rows="3" placeholder="請問你今天肚子還會痛嗎？" autofocus>{{ zh }}</textarea>
+
+    <h2>語音引擎</h2>
     <div class="backends">
       {% for key, label in backend_labels.items() %}
       <label>
@@ -33,6 +42,18 @@
       </label>
       {% endfor %}
     </div>
+
+    <h2>翻譯策略</h2>
+    <div class="strategies">
+      {% for key, label in strategy_labels.items() %}
+      <label>
+        <input type="radio" name="strategy" value="{{ key }}" {% if strategy == key %}checked{% endif %}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    <p class="hint">Adaptive模式只有句子裡含有已收錄的藥名/人名(例如「盤尼西林」「王小明」)才會觸發保護，其餘句子等同直接翻譯。這個網頁沒有結構化表單輸入，候選C(結構化模板)不會被觸發，只會用到候選A/B。</p>
+
     <button type="submit">翻譯+生成語音</button>
   </form>
 
@@ -40,12 +61,35 @@
   <div class="error">{{ error }}</div>
   {% endif %}
 
+  {% if blocked %}
+  <div class="blocked">
+    <div class="title">{{ blocked.message }}</div>
+    <div class="candidate">候選A(原文)：{{ blocked.raw_candidate }}{% if blocked.raw_missing %}（缺失：{{ blocked.raw_missing|join(', ') }}）{% endif %}</div>
+    <div class="candidate">候選B(遮罩)：{{ blocked.masked_candidate }}{% if blocked.masked_missing %}（缺失：{{ blocked.masked_missing|join(', ') }}）{% endif %}</div>
+  </div>
+  {% endif %}
+
   {% if result %}
   <div class="result">
     <div class="zh">中文：{{ result.zh }}</div>
     <div class="han">台語漢字：{{ result.han }}</div>
-    <div class="backend-used">語音引擎：{{ backend_labels[result.backend] }}</div>
+    <div class="backend-used">語音引擎：{{ backend_labels[result.backend] }} ｜ 翻譯策略：{{ strategy_labels[result.strategy] }}</div>
     <audio controls autoplay src="{{ result.audio_url }}"></audio>
+
+    {% if result.adaptive_info %}
+    <div class="adaptive-info">
+      <div class="chosen">選用候選：{{ result.adaptive_info.chosen }}</div>
+      {% if result.adaptive_info.protected_spans %}
+        <div>偵測到的Protected Token：
+          {% for span in result.adaptive_info.protected_spans %}
+            {{ span.kind }}「{{ span.original }}」→{{ span.placeholder }}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </div>
+      {% else %}
+        <div>這句沒有偵測到已收錄的藥名/人名，等同直接翻譯。</div>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 </body>

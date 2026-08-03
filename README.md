@@ -54,7 +54,13 @@ Firebase專案），改規則要在那邊 `firebase deploy --only firestore:rule
 平台不一樣。
 
 網頁版（`live_test/`）可以在同一個頁面切換 neurlang（快）/ MERaLiON（品質
-較好但慢約35倍）兩種語音引擎。一鍵啟動/關閉：
+較好但慢約35倍）兩種語音引擎，**也可以選翻譯策略**：「簡單版」（直接呼叫
+Ollama，跟以前一樣）或「Adaptive Protected Token」（重用
+`tw_hokkien_tts_pipeline/adaptive_translation.py` 的雙路翻譯+安全檢查，
+句子裡含有已收錄的藥名/人名時會觸發保護，畫面上會顯示選用了哪個候選、
+偵測到哪些Protected Token，兩個候選都不安全時會顯示fail closed擋下的
+原因，不會硬合成語音）。這個網頁沒有結構化表單輸入，候選C(結構化模板)
+不會被觸發，只會用到候選A/B。一鍵啟動/關閉：
 
 ```bash
 ollama serve   # 先確保這個有在跑（另開一個終端機視窗）
