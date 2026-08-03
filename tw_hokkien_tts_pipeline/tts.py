@@ -56,6 +56,15 @@ class TTSResult:
 class TTSBackend(ABC):
     name: str = "base"
 
+    # 這個backend合成時, 發音是不是「直接用人工校正過的台羅讀音」決定的。
+    # True: backend吃 tailo_text, 藥名等protected token的發音等於詞庫裡
+    #       人工校正過的那個字串 (前提是該詞有查到讀音, 見pipeline.py的
+    #       protected_pronunciation_enforced計算)。
+    # False: backend自己決定發音 (例如吃漢字+內建phonemizer自動轉音),
+    #        就算漢字本身正確還原了, 實際念出來的音也可能跟人工校正過的
+    #        台羅讀音不同——不能宣稱發音受Protected Token保護。
+    consumes_verified_pronunciation: bool = False
+
     @abstractmethod
     def synthesize(self, tts_input: TTSInput, out_path: Path) -> TTSResult:
         raise NotImplementedError
@@ -67,6 +76,7 @@ class MockTTSBackend(TTSBackend):
     跟真實TTS選哪種輸入格式無關。"""
 
     name = "mock"
+    consumes_verified_pronunciation = False  # 只是估計音節數決定長度, 不是真的合成發音
 
     def __init__(self, sample_rate: int = 16000, seconds_per_syllable: float = 0.35):
         self.sample_rate = sample_rate
@@ -114,13 +124,33 @@ class NeurlangTTSBackend(TTSBackend):
     反覆驗證過(pygoruut轉不出來的送氣/鼻化符號會被丟棄, 但輸入格式本身是
     漢字)。所以這個backend固定使用 `tts_input.hanji_text`, 忽略 tailo_text。
 
+    **實測過漢羅混合輸入, 結論是不安全, 沒有採用**（詳見
+    `tw_hokkien_tts_pipeline/README.md`「漢羅混合輸入實驗」章節）：
+    純台羅句子(例如 `puân-nî-se-lîm`)會讓 `syn.tts()` 卡死不回應(手動
+    測試等超過120秒沒有結果, 只能強制中止進程)；漢字句子裡嵌入台羅片段
+    (例如把藥名換成台羅拼音再嵌回整句漢字裡)雖然沒有直接crash, 但
+    phonemizer trace 出現不該存在的雜訊字元(例如數字'1'混進IPA音素序列),
+    且輸出音檔明顯比純漢字版本短, 研判台羅片段沒有被正確音素化。**結論：
+    這個backend不支援也不該被強迫接受台羅/漢羅混合輸入, 一律只用純漢字。**
+
     需要 `transformers<5`(coqui-tts的要求), 跟MERaLiON要的`transformers>=5.3.0`
     互斥。若目前環境版本不對或模型權重不存在, 會丟出清楚的例外, **不會偷偷
     fallback 成 mock 提示音**——避免使用者誤以為真的合成成功了。
+
+    **重要：Protected Token在這個backend身上只保證「藥名漢字」被保留,
+    不保證「發音」等於人工校正過的台羅讀音。** 因為輸入是漢字, 實際念法
+    是neurlang自己內建的phonemizer從漢字重新推導出來的, 不是直接拿
+    `drug_lexicon` 裡的 `puân-nî-se-lîm` 這種人工校正過的台羅去合成——
+    這兩者不一定一樣(尤其罕見藥名的正確台語念法, phonemizer不見得會念對)。
+    所以 `consumes_verified_pronunciation` 固定是 False, 對應
+    `pipeline.py` 產生的 debug 欄位 `protected_pronunciation_enforced`
+    在這個backend身上永遠是 False, 不能宣稱醫療專名發音已受保護，只能說
+    「文字沒有被翻譯層弄丟/弄錯」。
     """
 
     name = "neurlang"
     model_id = "neurlang/coqui-vits-suisiann-minnan-hokkien"
+    consumes_verified_pronunciation = False
 
     # 跟 live_test/tts_backend.py 同一個慣例：這個檔案在
     # tw_hokkien_tts_pipeline/tts.py，repo 根目錄是往上一層
@@ -198,10 +228,16 @@ class SpeechT5TailoBackend(TTSBackend):
 
     並確認目標模型 (例如 speecht5_tailo-hokkien 系列) 的輸入是否直接吃
     台羅字串, 或需要先轉成該模型訓練時使用的音素表示法; 這需要參考模型
-    卡片或直接詢問模型作者。這個backend使用 tailo_text(台羅), 不是漢字。
+    卡片或直接詢問模型作者。這個backend使用 tailo_text(台羅), 不是漢字,
+    所以理論上(在骨架驗證過之前只是理論上) `consumes_verified_pronunciation`
+    可以是 True——如果詞庫裡有查到人工校正過的台羅讀音, 送進模型的就是
+    那個字串本身, 不是模型自己重新推導的發音。**但這個backend本身還沒
+    實際驗證過**, 這個旗標只代表「架構設計上是吃驗證過的台羅」, 不代表
+    「已驗證這個模型真的會照著念」。
     """
 
     name = "speecht5"
+    consumes_verified_pronunciation = True
 
     def __init__(self, model_id: str, vocoder_id: str, speaker_embedding_path: str | None = None):
         self.model_id = model_id

@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from .config import PipelineConfig
-from .protected_tokens import ProtectedTokenGuard
+from .protected_tokens import _PLACEHOLDER_RE, ProtectedTokenGuard
 from .romanize import RomanizationResult, romanize
 from .segment import SegmentationResult, build_segmentation_backend
 from .translate import TranslationResult, build_translation_backend
@@ -24,6 +24,8 @@ class PipelineResult:
     romanization: RomanizationResult
     hanji_text: str  # 翻譯後台語漢字, Protected Token 已還原成原文寫法 (供 neurlang 等吃漢字的 backend 使用)
     tts: TTSResult
+    protected_text_preserved: bool  # 每個protected span的原文是否都完整出現在最終送進TTS的文字裡 (沒有遺失/改序/類型互換)
+    protected_pronunciation_enforced: bool  # 是否保證TTS真的用了人工校正過的台羅讀音 (不是backend自己重新推導的發音)
     warnings: list[str] = field(default_factory=list)
 
     def to_debug_dict(self) -> dict:
@@ -40,6 +42,8 @@ class PipelineResult:
             "unresolved_count": self.romanization.unresolved_count,
             "mean_confidence": self.romanization.mean_confidence,
             "hanji_text": self.hanji_text,
+            "protected_text_preserved": self.protected_text_preserved,
+            "protected_pronunciation_enforced": self.protected_pronunciation_enforced,
             "tts": {
                 "backend": self.tts.backend_name,
                 "model_id": self.tts.model_id,
@@ -91,7 +95,10 @@ class Pipeline:
         # 3. 斷詞 + 轉台羅
         segmentation = self.segmentation_backend.segment(translation.translated_text)
         if segmentation.unresolved_words:
-            surfaces = [w.surface for w in segmentation.unresolved_words if not w.surface.startswith("__")]
+            surfaces = [
+                w.surface for w in segmentation.unresolved_words
+                if not _PLACEHOLDER_RE.fullmatch(w.surface)
+            ]
             if surfaces:
                 warnings.append(f"斷詞後查無台羅讀音, 已用原字 fallback: {surfaces}")
 
@@ -111,6 +118,23 @@ class Pipeline:
         tts_input = TTSInput(hanji_text=hanji_text, tailo_text=tailo_text)
         tts_result = self.tts_backend.synthesize(tts_input, out_path)
 
+        # 實際送進這次用的backend的文字 (漢字或台羅, 依tts_result.text_format而定)，
+        # 用來檢查每個protected span的內容是否真的完整出現在裡面，而不是憑空假設
+        # 「呼叫過unmask就等於保留成功」——翻譯/斷詞層若把佔位符弄壞，這裡才抓得到。
+        text_sent_to_tts = hanji_text if tts_result.text_format == "hanji" else tailo_text
+        protected_text_preserved = all(
+            span.original in text_sent_to_tts for span in mask_result.spans
+        )
+
+        # 發音是否真的受保護: 只有當backend直接消費「人工校正過的台羅讀音」
+        # (consumes_verified_pronunciation=True) 且每個藥名都有查到讀音(coverage=100%)
+        # 時才能算數。neurlang這類吃漢字+自己內建phonemizer的backend, 固定是False——
+        # 漢字文字保留下來不代表模型會照著人工校正過的讀音念。
+        protected_pronunciation_enforced = (
+            getattr(self.tts_backend, "consumes_verified_pronunciation", False)
+            and coverage >= 1.0
+        )
+
         result = PipelineResult(
             source_text=zh_text,
             masked_text=mask_result.masked_text,
@@ -119,6 +143,8 @@ class Pipeline:
             romanization=romanization,
             hanji_text=hanji_text,
             tts=tts_result,
+            protected_text_preserved=protected_text_preserved,
+            protected_pronunciation_enforced=protected_pronunciation_enforced,
             warnings=warnings,
         )
 

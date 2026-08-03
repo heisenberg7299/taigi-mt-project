@@ -54,7 +54,8 @@ class MockSegmentationBackend(SegmentationBackend):
     name = "mock"
 
     # 示範詞庫: 台語漢字 -> 台羅 (數字調), 僅供串接測試, 非正式發音資料
-    # 佔位符 (__DRUG_0__ 等) 直接視為一個「詞」, 交由後續 romanize 層處理
+    # 佔位符 (DRUGA 等純大寫字母格式, 見 protected_tokens.py) 直接視為一個
+    # 「詞」, 交由後續 romanize 層處理
     _DEMO_LEXICON = {
         "請": "chhiánn",
         "愛": "ài",
@@ -70,9 +71,7 @@ class MockSegmentationBackend(SegmentationBackend):
         words: list[SegmentedWord] = []
         remaining = tai_text
         # 依詞長由長到短貪婪比對, 佔位符優先整段視為一詞
-        import re
-
-        placeholder_re = re.compile(r"__[A-Z]+_\d+__")
+        from .protected_tokens import _PLACEHOLDER_RE as placeholder_re
 
         i = 0
         while i < len(remaining):

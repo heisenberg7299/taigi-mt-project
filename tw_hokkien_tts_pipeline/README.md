@@ -23,7 +23,11 @@
 
 TTS層會同時拿到「翻譯後台語漢字」跟「正規化台羅」兩種格式，由backend自己
 選——neurlang訓練時吃的是漢字（內建phonemizer自動轉IPA），不能假設pipeline
-最後產生的台羅字串一定能直接餵給任何TTS模型。
+最後產生的台羅字串一定能直接餵給任何TTS模型。**明確說明：`segment.py`跟
+`romanize.py`產生的台羅字串(`TTSInput.tailo_text`)並沒有送進neurlang**，
+`NeurlangTTSBackend`固定只用還原後的台語漢字(`TTSInput.hanji_text`)；
+台羅字串只供其他吃台羅輸入的backend使用(目前是尚未驗證的`SpeechT5TailoBackend`
+骨架)。
 
 ## 檔案結構
 
@@ -117,11 +121,53 @@ python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林�
   embedding 只是佔位, 正式使用前要換成合適的值。這個backend用台羅
   (`TTSInput.tailo_text`)。
 
+### 漢羅混合輸入實驗 (2026-08-03)
+
+**動機**：neurlang固定吃漢字, Protected Token的人工校正台羅讀音
+(`drug_lexicon`的值) 目前沒辦法真的影響neurlang的發音——想確認能不能
+把藥名部分直接嵌入台羅拼音、其餘維持漢字 (「漢羅混合」), 讓藥名發音
+真的照人工校正過的版本念, 而不是靠neurlang自己的phonemizer重新猜。
+
+**實測方法**：直接呼叫 `Synthesizer.tts()`, 分別測試 (a) 純漢字整句
+(對照組, 已知正常) (b) 純台羅單詞 (c) 漢字整句裡嵌入台羅拼音的藥名片段。
+
+**結果**：
+- 純台羅輸入 (例如 `puân-nî-se-lîm`) 會讓 `syn.tts()` **卡死**, 手動測試
+  超過120秒沒有回應, 只能強制中止進程, 不是單純變慢。
+- 漢羅混合 (例如「請愛記得佇暗頓後食puân-nî-se-lîm。」) 沒有直接crash,
+  但phonemizer的debug trace出現了不該存在的雜訊字元 (數字 `1` 混進IPA
+  音素序列裡, 正常IPA輸出不會有阿拉伯數字), 且輸出音檔明顯比對照組短
+  (59152 samples vs 對照組81936 samples, 同樣句子長度), 研判台羅片段
+  的部分沒有被正確音素化, 而不是「支援但比較慢」。
+
+**結論**：**neurlang不安全支援台羅或漢羅混合輸入, 沒有採用這個方向。**
+`NeurlangTTSBackend` 維持只用純漢字輸入 (`TTSInput.hanji_text`), 不強行
+修改模型輸入格式。這代表 Protected Token 在neurlang這個backend身上
+**只能保證藥名文字被正確保留**, 不能保證發音等於人工校正過的台羅讀音——
+見下面「醫療安全設計」章節的 `protected_pronunciation_enforced` 說明。
+若要讓TTS真的照人工校正過的台羅讀音念藥名, 需要換一個吃台羅輸入的模型
+(例如骨架化但尚未驗證的 `SpeechT5TailoBackend`), 或是等有支援漢羅混合的
+neurlang版本/替代模型出現。
+
 ## 醫療安全設計
 
-- **Protected Token**: 藥名/人名/劑量在送進翻譯層前先遮罩成 `__DRUG_0__` 等
-  佔位符, 避免翻譯模型誤譯、漏譯或竄改; 翻譯完成後才用人工校正過的發音詞庫
-  換回台羅讀音。
+- **Protected Token**: 藥名/人名/劑量在送進翻譯層前先遮罩成純大寫英文格式
+  的佔位符 (例如 `DRUGA`, `PERSONB`, `DOSEC`, 見 `protected_tokens.py`
+  docstring說明格式選擇的理由), 避免翻譯模型誤譯、漏譯或竄改; 翻譯完成後
+  才用人工校正過的發音詞庫換回台羅讀音 (或原文漢字, 供不同TTS backend使用)。
+  同一類別若有多個實體 (例如兩個藥名), 依序用不同字母 (`DRUGA`/`DRUGB`/...)
+  區分, 不會互相覆蓋; 也處理了「藥名+劑量緊接沒有分隔字元」時兩個佔位符
+  黏在一起 (例如`DRUGADOSEA`) 仍能正確切分還原的情況 (見
+  `tests/test_protected_tokens_integrity.py`)。
+- **`protected_text_preserved` / `protected_pronunciation_enforced`**
+  (`pipeline.py` debug trace欄位)：前者表示每個protected span的原文
+  是否都完整出現在最終送進TTS的文字裡 (文字沒有遺失/改序/類型互換)；
+  後者表示TTS**發音**是否真的用了人工校正過的台羅讀音, 不是backend自己
+  重新推導的。**`NeurlangTTSBackend` 因為只吃漢字、發音靠自己內建
+  phonemizer決定, 這個欄位固定是 `False`**——文字保留成功不等於發音
+  受保護, 兩者是分開的保證, 不能混為一談。只有真的消費台羅文字的backend
+  (`consumes_verified_pronunciation=True`, 且該藥名有查到詞庫讀音)
+  才會是 `True`。
 - **Fail-closed 選項**: `PipelineConfig.require_full_protected_coverage=True`
   時, 只要有任何藥名沒有經人工校正的台羅讀音, `pipeline.run()` 會直接
   `raise ValueError` 擋下合成, 而不是讓 TTS 用猜測的發音念出藥名。
@@ -142,3 +188,9 @@ python3 -m tw_hokkien_tts_pipeline.cli "請記得在晚餐後服用盤尼西林�
 - `NeurlangTTSBackend` 已驗證能實際出聲，但沿用的是neurlang本身既有的限制
   （見 `reports/tts_oov_audit.md`）：送氣/鼻化符號(ʰ/ã/ĩ等)會被內建
   phonemizer丟棄，這是模型詞彙表本身的問題，不是這次串接造成的。
+- **`NeurlangTTSBackend` 的Protected Token只保護文字，不保護發音**：
+  `protected_pronunciation_enforced` 固定是 `False`，藥名等關鍵詞的漢字
+  雖然保證會出現在送進模型的文字裡，但實際念法是neurlang自己的phonemizer
+  決定的，不是`drug_lexicon`裡人工校正過的台羅讀音——已實測過漢羅混合
+  輸入不安全（見上方「漢羅混合輸入實驗」），沒有辦法在不影響穩定性的前提下
+  繞過這個限制。

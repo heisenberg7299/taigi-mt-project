@@ -51,7 +51,7 @@ def test_neurlang_backend_produces_real_audio(tmp_path: Path):
     assert tts.backend_name == "neurlang"
     assert tts.text_format == "hanji"
     # 實際送進模型的應該是台語漢字(含還原後的藥名), 不是台羅或含佔位符
-    assert "__DRUG_0__" not in tts.text
+    assert "DRUGA" not in tts.text
     assert "盤尼西林" in tts.text
 
     # 2. wav檔案確實產生
@@ -86,6 +86,13 @@ def test_neurlang_backend_produces_real_audio(tmp_path: Path):
     assert debug_dict["tts"]["inference_sec"] is not None
     assert debug_dict["tts"]["duration_sec"] is not None
     assert debug_dict["tts"]["non_silence_ratio"] is not None
+
+    # 7. Protected Token文字保留成功(藥名漢字確實在最終文字裡)，
+    #    但neurlang不消費人工校正過的台羅讀音，發音不能宣稱受保護
+    assert result.protected_text_preserved is True
+    assert result.protected_pronunciation_enforced is False
+    assert debug_dict["protected_text_preserved"] is True
+    assert debug_dict["protected_pronunciation_enforced"] is False
 
 
 def test_neurlang_backend_raises_on_missing_model(tmp_path: Path):
