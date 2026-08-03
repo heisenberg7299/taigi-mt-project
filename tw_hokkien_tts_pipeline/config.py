@@ -42,6 +42,15 @@ class PipelineConfig:
     output_dir: Path = field(default_factory=lambda: Path("./pipeline_output"))
     save_debug_trace: bool = True
 
+    # 翻譯策略: "single" 固定遮罩後才翻譯(原本的做法)
+    #           "adaptive" 雙路翻譯(原文/遮罩)+安全檢查選擇, 不是所有專名一律遮罩。
+    #             背景：實測發現「一律遮罩」對「模型本來就認得的常見詞」(例如
+    #             普拿疼)反而有害——遮罩成DRUGA後模型當成陌生詞去泛化翻譯，
+    #             比不遮罩還差。詳見 adaptive_translation.py。兩個候選都沒通過
+    #             安全檢查時會丟出 UnsafeTranslationError(fail closed)，不是
+    #             警告了事，因為這代表兩種策略都救不回這句話。
+    translation_strategy: Literal["single", "adaptive"] = "single"
+
     # 醫療安全: 是否強制要求 protected token 詞庫 (人工校正過的發音) 命中率達 100% 才放行
     require_full_protected_coverage: bool = False
 

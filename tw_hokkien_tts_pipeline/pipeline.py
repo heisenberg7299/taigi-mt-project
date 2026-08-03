@@ -8,6 +8,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from .adaptive_translation import translate_adaptive
 from .config import PipelineConfig
 from .protected_tokens import _PLACEHOLDER_RE, ProtectedTokenGuard
 from .romanize import RomanizationResult, romanize
@@ -122,39 +123,65 @@ class Pipeline:
         if coverage < 1.0:
             warnings.append(f"部分藥名/實體查無人工校正台羅讀音 (涵蓋率 {coverage:.0%})")
 
-        # 2. 翻譯 (帶著佔位符送出, 避免翻譯模型動到關鍵資訊)
-        translation = self.translation_backend.translate(mask_result.masked_text)
-
-        # 2a. Protected Token 完整性檢查: 翻譯過程(尤其是真實LLM, 生成式、
-        #     非決定性)有沒有把佔位符弄丟或複製
-        protected_token_integrity = _check_protected_token_integrity(
-            translation.translated_text, mask_result.spans
-        )
-        if not protected_token_integrity["ok"]:
-            msg = (
-                f"Protected token在翻譯過程中被弄壞: "
-                f"missing={protected_token_integrity['missing']}, "
-                f"duplicated={protected_token_integrity['duplicated']}"
+        if self.config.translation_strategy == "adaptive":
+            # 2'. Adaptive Protected Token：雙路翻譯(原文/遮罩)+安全檢查選擇，
+            #     不是所有專名一律遮罩——實測發現「一律遮罩」對模型本來就
+            #     認得的常見詞反而有害。兩個候選都沒通過會直接raise
+            #     UnsafeTranslationError(fail closed)，不是警告了事，見
+            #     adaptive_translation.py。
+            adaptive_result = translate_adaptive(zh_text, self.guard, self.translation_backend)
+            chosen_candidate = (
+                adaptive_result.raw_candidate if adaptive_result.chosen == "raw"
+                else adaptive_result.masked_candidate
             )
-            if self.config.require_protected_token_integrity:
-                raise ValueError(f"{msg}（已阻擋合成, require_protected_token_integrity=True）")
-            warnings.append(msg)
+            translation = TranslationResult(
+                source_text=zh_text,
+                translated_text=chosen_candidate.llm_output,
+                backend_name=f"{adaptive_result.translation_backend_name}(adaptive:{adaptive_result.chosen})",
+                raw_response=adaptive_result.to_debug_dict(),
+            )
+            hanji_text = adaptive_result.hanji_text
+            protected_token_integrity = {
+                "ok": chosen_candidate.entities_ok,
+                "missing": chosen_candidate.missing_entities,
+                "duplicated": chosen_candidate.duplicated_entities,
+            }
+            safety_checks = chosen_candidate.safety_checks
+            warnings.append(f"Adaptive Protected Token選擇了候選「{adaptive_result.chosen}」")
+        else:
+            # 2. 翻譯 (帶著佔位符送出, 避免翻譯模型動到關鍵資訊)
+            translation = self.translation_backend.translate(mask_result.masked_text)
 
-        # 2b. 還原成「原文漢字」版本, 供下面的安全檢查跟neurlang等吃漢字的backend使用。
-        #     刻意在斷詞/正規化之前就算出來, 因為它只依賴translation.translated_text
-        #     + mask_result.spans, 不需要等後面的步驟
-        hanji_text = self.guard.unmask_text(translation.translated_text, mask_result.spans)
+            # 2a. Protected Token 完整性檢查: 翻譯過程(尤其是真實LLM, 生成式、
+            #     非決定性)有沒有把佔位符弄丟或複製
+            protected_token_integrity = _check_protected_token_integrity(
+                translation.translated_text, mask_result.spans
+            )
+            if not protected_token_integrity["ok"]:
+                msg = (
+                    f"Protected token在翻譯過程中被弄壞: "
+                    f"missing={protected_token_integrity['missing']}, "
+                    f"duplicated={protected_token_integrity['duplicated']}"
+                )
+                if self.config.require_protected_token_integrity:
+                    raise ValueError(f"{msg}（已阻擋合成, require_protected_token_integrity=True）")
+                warnings.append(msg)
 
-        # 2c. 台語語意安全檢查 (否定詞/數字一致性/醫療術語/長度異常/陷阱字),
-        #     比對原文zh_text跟還原後的hanji_text——不是翻譯本身，是翻譯完之後
-        #     的把關層，只會告訴你「這次翻譯可能有問題」，不會自己修正
-        safety_checks = _run_safety_checks(zh_text, hanji_text)
-        failed_checks = [name for name, r in safety_checks.items() if not r["ok"]]
-        if failed_checks:
-            msg = f"台語語意安全檢查未通過: {failed_checks}"
-            if self.config.require_safety_checks_pass:
-                raise ValueError(f"{msg}（已阻擋合成, require_safety_checks_pass=True）")
-            warnings.append(msg)
+            # 2b. 還原成「原文漢字」版本, 供下面的安全檢查跟neurlang等吃漢字的backend使用。
+            #     刻意在斷詞/正規化之前就算出來, 因為它只依賴translation.translated_text
+            #     + mask_result.spans, 不需要等後面的步驟
+            hanji_text = self.guard.unmask_text(translation.translated_text, mask_result.spans)
+
+            # 2c. 台語語意安全檢查 (否定詞/數字一致性/醫療術語/長度異常/陷阱字),
+            #     比對原文zh_text跟還原後的hanji_text——不是翻譯本身，是翻譯完之後
+            #     的把關層，只會告訴你「這次翻譯可能有問題」，不會自己修正
+            safety_checks = _run_safety_checks(zh_text, hanji_text)
+            failed_checks = [name for name, r in safety_checks.items() if not r["ok"]]
+            if failed_checks:
+                msg = f"台語語意安全檢查未通過: {failed_checks}"
+                if self.config.require_safety_checks_pass:
+                    raise ValueError(f"{msg}（已阻擋合成, require_safety_checks_pass=True）")
+                warnings.append(msg)
 
         # 3. 斷詞 + 轉台羅
         segmentation = self.segmentation_backend.segment(translation.translated_text)

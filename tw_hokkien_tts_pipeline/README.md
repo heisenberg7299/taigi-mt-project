@@ -40,18 +40,20 @@ TTS層會同時拿到「翻譯後台語漢字」跟「正規化台羅」兩種�
 ```
 tw_hokkien_tts_pipeline/
   __init__.py          套件進入點
-  config.py             PipelineConfig: 選擇 mock/taigi_llama/neurlang/real 後端與安全開關
+  config.py             PipelineConfig: 選擇 mock/taigi_llama/neurlang/real 後端、translation_strategy與安全開關
   protected_tokens.py    藥名/人名/劑量的遮罩與還原
   translate.py           TranslationBackend 介面 (Mock + Taigi-Llama已驗證 + HTTP骨架)
+  adaptive_translation.py Adaptive Protected Token: 雙路翻譯(原文/遮罩)+安全檢查選擇
   segment.py              SegmentationBackend 介面 (Mock 斷詞/轉台羅)
   romanize.py             台羅正規化 + 簡化版連讀變調 (預設關閉)
   tts.py                  TTSBackend 介面 (Mock WAV + Neurlang已驗證 + SpeechT5骨架)
   audio_metrics.py         讀取wav檔量測時長/非靜音比例/NaN/全零等品質指標
-  pipeline.py              串接以上各層的主流程, 含Protected Token完整性/安全檢查
+  pipeline.py              串接以上各層的主流程, 含Protected Token完整性/安全檢查/adaptive策略
   cli.py                    命令列介面
   tests/
     test_pipeline.py                       pytest 測試 (7 項, 針對mock流程的回歸測試)
     test_protected_tokens_integrity.py     多個同類Protected Token的完整性測試 (5項)
+    test_adaptive_translation.py           Adaptive Protected Token雙路策略測試, 假backend決定性 (4項)
     test_translate_taigi_llama_smoke.py    真實翻譯 smoke test (需要Ollama在跑, 否則自動skip)
     test_tts_neurlang_smoke.py             真實TTS smoke test (需要neurlang模型權重才會跑, 否則自動skip)
 ```
@@ -105,6 +107,54 @@ Protected Token佔位符當一般文字改寫、複製、或整個漏掉——�
 誤報率偏高)，預設關閉避免過度阻擋。要fail-closed(檢查沒過就直接
 `raise ValueError`擋下合成)，用CLI的`--require-safety-checks`，或
 `PipelineConfig(require_protected_token_integrity=True, require_safety_checks_pass=True)`。
+
+## Adaptive Protected Token (2026-08-03)
+
+實測10句泛化測試發現「一律遮罩」策略不是穩賺不賠：「普拿疼」這種模型本來
+就認得的常見詞，遮罩成`DRUGA`後模型反而當成陌生詞去泛化翻譯，退步成籠統的
+「藥仔」，比不遮罩還差；但「盤尼西林」這種生僻詞遮罩後才成功保留。所以
+`adaptive_translation.py`改成雙路策略，不是所有專名一律遮罩：
+
+1. 候選A(原文不遮罩)：如果每個protected entity的原文字面完整保留在輸出裡、
+   且安全檢查通過 → 直接用這個(最好狀況只花一次LLM呼叫)。
+2. 候選A失敗，但候選B(遮罩後翻譯)的佔位符完整、且安全檢查通過 → 還原後使用。
+3. 兩者都失敗 → `UnsafeTranslationError`，**fail closed，不合成語音**，不是
+   警告了事——因為這代表兩種策略都救不回這句話。
+
+開啟方式：`PipelineConfig(translation_strategy="adaptive")`。
+
+### 用真實Taigi-Llama重跑10句泛化測試集的結果
+
+| 句子 | 舊策略(一律遮罩) | Adaptive策略 |
+|---|---|---|
+| 盤尼西林過敏 | Level 3，藥名消失 | 兩候選都失敗，**fail closed**(候選B技術上保留了藥名，但被否定詞檢查的已知誤報擋下，見下方) |
+| 王小明先生 | Level 3，名字消失 | 兩候選都失敗，**fail closed**(即使改用完整姓名`王小明`遮罩，LLM仍把佔位符整個丟掉) |
+| 呼吸治療師（幻覺成氧氣治療師） | Level 3，職稱被幻覺 | 兩候選都失敗，**fail closed**(這個詞不在任何保護詞庫裡，兩條路輸出相同，正確地被擋下——比舊策略「幻覺內容照樣播出去」安全) |
+| 隔壁床陳太太 | Level 3，情境整個跑掉 | 選了候選A，**但内容其實還是錯的**(「隔壁床」變「厝邊兜」、「呼叫鈴」變「哨音」)，因為「陳太太」這個詞本身有保留、安全檢查也没抓到domain shift，所以被判定通過 |
+| 胰島素冷藏 | Level 1，藥名被改述 | 候選A失敗、候選B成功，**選了遮罩版本，藥名正確保留** |
+| 心律不整 | Level 2，語意流失 | 沒有配置保護詞庫，兩策略結果相同，問題未解決(預期內) |
+| 普拿疼六顆 | Level 0(本來就對) | 候選A直接成功，**沒有像舊策略那樣退步** |
+| 其餘3句(輪椅/營養師/麻醉科) | Level 0 | 不受影響，維持正確 |
+
+**重要限制，不能過度解讀這次結果**：
+
+- **人名保護依然不可靠**：改用完整姓名(`王小明`而非只有名字`小明`)遮罩，
+  沒有解決LLM把佔位符整個丟掉的問題——不管遮不遮罩、遮罩格式如何調整，
+  這句人名都保留不住。這代表問題不是遮罩格式，可能需要更根本的做法(結構化
+  模板生成、或從病患資料庫直接取名字而不是靠文字比對，而不是繼續在
+  「怎麼遮罩」上做文章)。
+- **`protected_token_integrity`可靠，`safety_checks`不能涵蓋所有問題**：
+  這次測試裡`protected_token_integrity`正確抓到每一次佔位符遺失，沒有漏判；
+  但「陳太太」這個案例證明safety_checks**無法**偵測到「實體有保留、但周邊
+  語境整個跑掉」(domain shift/角色關係消失)這類問題——這類問題目前完全
+  沒有自動化檢查手段，是translation safety這塊還需要擴大測試才能回答的
+  open question，不能因為這次protected_token_integrity表現好就誤以為整體
+  翻譯安全已經有把握。
+- **修正了否定詞清單的一個漏洞**：`scripts/safety_checks.py`原本的
+  `NAN_NEGATION`清單漏收「莫」(標準台語否定詞，「莫食」=「不要吃」)，
+  導致「普拿疼」案例一開始被誤判擋下——已補上。「盤尼西林」案例殘留的
+  「敢會」(疑問句形式，語法上不一定需要顯式否定標記)則還沒修，是更細緻的
+  文法規則問題，不是簡單加關鍵字能解決的。
 
 ## 目前是 mock, 換成真實後端前要做的事
 
