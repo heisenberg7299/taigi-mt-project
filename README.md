@@ -5,10 +5,18 @@
 
 ## 目前狀態
 
-- 階段0-3已有實際產出：200句測試集、兩個真跑過的 baseline（辭典最長詞匹配 / Taigi-Llama-2-Translator-7B）、
-  量化比較報告（[`reports/stage2_baseline_comparison.md`](./reports/stage2_baseline_comparison.md)）、
-  安全檢查層腳本與結果（[`reports/stage3_safety_checks.md`](./reports/stage3_safety_checks.md)）
-- 母語者驗證平台已上線，見下方
+- **翻譯**：以開源 Taigi-Llama-2-Translator-7B 當baseline，在200句精選測試集上表現不錯
+  （量化比較見 [`reports/stage2_baseline_comparison.md`](./reports/stage2_baseline_comparison.md)）。
+  但額外測試10句**不在**測試集裡的新句子後發現：**40%出現嚴重語意流失，其中包含
+  醫療安全等級的風險**（例如藥名整個消失）——這是目前最重要的風險發現，已有初步
+  解法原型（Protected Token機制），但還沒到能保證100%可靠的程度。詳見
+  [`reports/safety_critical_translation_failures.md`](./reports/safety_critical_translation_failures.md)
+- **語音合成**：主力用 neurlang VITS（快、CPU可即時），另外實測過
+  MERaLiON-OmniVoice-Hokkien-TTS（品質較好，但比即時慢約35倍，適合離線生成、
+  不適合即時互動）。完整候選比較見 [`reports/stage4_tts_candidates.md`](./reports/stage4_tts_candidates.md)
+- **母語者驗證平台已上線**：邀請台語母語者對翻譯候選逐句打分，24小時可用，見下方
+- **開發者測試playground**：可以當場輸入任意中文句子、即時聽到台語語音輸出、
+  比較不同TTS引擎，見下方「開發者即時測試工具」
 
 ## 母語者驗證平台
 
@@ -38,6 +46,42 @@ Firebase專案），改規則要在那邊 `firebase deploy --only firestore:rule
 真實測試資料都在Firestore，本機 `data/human_review/` 底下的舊資料是遷移前的
 歷史存檔（遷移腳本：`scripts/migrate_to_firestore.py`）。
 
+## 開發者即時測試工具
+
+跟上面的驗證平台不同：這是給開發者自己測任意新句子用的，不是固定200句，
+只在本機跑，需要Ollama和TTS模型都在本機才能動，本機關機/沒開這個服務就
+連不到——這點跟已經遷到GitHub Pages+Firebase、不依賴任何一台電腦的驗證
+平台不一樣。
+
+網頁版（`live_test/`）可以在同一個頁面切換 neurlang（快）/ MERaLiON（品質
+較好但慢約35倍）兩種語音引擎。一鍵啟動/關閉：
+
+```bash
+ollama serve   # 先確保這個有在跑（另開一個終端機視窗）
+
+bash scripts/start_live_test.sh   # 啟動neurlang後端+MERaLiON後端+gateway+對外tunnel
+bash scripts/stop_live_test.sh    # 全部關閉
+```
+啟動完成後終端機會印出本機網址（`http://127.0.0.1:5002`）跟對外網址
+（`CURRENT_TUNNEL_URL.txt`，同一個Wi-Fi的其他裝置或外部網路都能連，網址
+每次啟動都會變，斷線每60秒自動偵測重啟——沿用驗證平台當初用過的
+watchdog機制，只是現在指到這個開發測試用的gateway，不是驗證平台，驗證
+平台本身已經不需要靠本機了）。
+
+背後架構：因為neurlang跟MERaLiON要的transformers版本互斥（`<5` vs
+`>=5.3.0`），沒辦法同一個process同時載入，所以拆成三個process——
+gateway（`live_test/app.py`，只做翻譯+轉發，用主venv）+ 兩個獨立的
+`live_test/tts_backend.py`（各自跑在獨立venv，內部port互不干擾），
+`start_live_test.sh`/`stop_live_test.sh` 會照順序啟動/關閉全部。
+
+指令列版（`scripts/zh_to_taigi_speech.py`，只用neurlang、一次可測多句，用
+Finder開結果資料夾），要另外手動確保主venv是 `transformers<5`：
+```bash
+source venv/bin/activate
+python3 scripts/zh_to_taigi_speech.py "你的中文句子"
+python3 scripts/zh_to_taigi_speech.py "句子1" "句子2" "句子3"
+```
+
 ## 環境設置
 
 ```bash
@@ -56,3 +100,11 @@ python3 scripts/run_tts_benchmark.py      # 階段4：統一TTS候選跑分（�
 
 模型權重（`models/`）、原始資料集下載（`data/raw/`）與合成音檔（`tests/audio/`）不進版控，
 需依上面指令重新產生。授權細節見 `data/licenses/`（下載後產生）與 `PLAN.md` 資源表。
+
+MERaLiON-OmniVoice-Hokkien-TTS 要的 `transformers>=5.3.0` 跟主venv用的
+`transformers<5`（neurlang/coqui-tts的要求）互斥，所以另外開一個獨立venv：
+```bash
+python3 -m venv venv_meralion
+source venv_meralion/bin/activate
+pip install torch torchaudio torchcodec omnivoice soundfile flask
+```
