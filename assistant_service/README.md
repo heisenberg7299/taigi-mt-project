@@ -84,6 +84,47 @@ fallback、from_dict不會crash)，加上原本的全部46項測試通過。
 的分階段做法：先確認「JSON進來、安全機制擋得住、TTS真的會出聲」這條路
 可靠，之後不管換什麼LLM/RAG當大腦，這條路都不用重做。
 
+## voice_io_bridge.py：第一個真實(非手動填寫)輸入來源(2026-08-04)
+
+接上[yuava22/Interactive-service-robots](https://github.com/yuava22/Interactive-service-robots)
+的`voice_io_event_detector`套件——這不是LLM/RAG，是規則式(關鍵字比對)的
+病床語音助理：Whisper ASR辨識文字 → `intent_rules.decide_event_and_reply()`
+判斷3種意圖(喝水/上廁所/求助)並各自回傳固定中文回覆 → 原本用gTTS生成
+中英雙語語音。
+
+`voice_io_bridge.py`借用前兩步(ASR+規則式意圖判斷)，把`EventDecision`
+轉成`BrainResponse`，取代原本的gTTS中英語音，改用已經驗證過的
+`tw_hokkien_tts_pipeline`+neurlang輸出台語語音。實測過`WATER_REQUEST`
+案例真的端到端跑出WAV（`translation_method="raw"`，因為`risk_level`
+固定給`"low"`——這3種規則式意圖完全不涉及藥物/劑量/病歷，`slots`是空的，
+不會被交叉比對擋下來，也不需要走`StructuredMedicalRenderer`）。
+
+**risk_level跟priority是分開判斷的兩件事**：`HELP_REQUEST`(求助/救命)
+的`priority`用`PRIORITY_NURSE_ALERT`(80，可能插播一般服務中的語音)，但
+`risk_level`一樣是`"low"`，因為這句話的翻譯內容本身不涉及藥物/醫囑，
+不需要`StructuredMedicalRenderer`把關——`priority`管的是播放佇列的插播
+順序，`risk_level`管的是翻譯策略能不能讓adaptive A/B自由決定用字，兩者
+互相獨立。
+
+**這個轉換邏輯目前綁死一個假設**：對方repo的`intent_rules.py`只有3種
+規則、完全不涉及藥物/醫囑，所以這裡才能安全地固定給`"low"`。如果對方
+repo之後新增涉及藥物/醫囑的規則式意圖，`voice_io_bridge.py`必須跟著
+更新(比照`response_controller.py`的`_HIGH_RISK_INTENT_KEYWORDS`)，不能
+假設「規則式(非LLM)輸出」就永遠是低風險。
+
+**`run_from_wav()`需要真的安裝對方套件**(`pip install -e path/to/
+Interactive-service-robots`，含openai-whisper相依)才能跑ASR，這是刻意
+delay-import的設計，讓`voice_io_bridge.py`本身不會因為對方套件沒裝而
+整個import失敗——`event_decision_to_brain_response()`本身零相依，可以
+獨立測試轉換邏輯(見`tests/test_voice_io_bridge.py`)。對方repo的
+`gesture_detector.py`(YOLO鏡頭手勢偵測)跟`tts.py`(gTTS)完全沒有用到，
+只借用ASR+意圖判斷這兩塊。
+
+還沒做：真的裝這個套件跑`run_from_wav()`(目前只驗證過手動建構
+`EventDecision`的轉換邏輯+後續管線，沒有真的餵Whisper辨識過的語音檔進去)、
+`camera`子命令(手勢/物件偵測)完全沒有整合進來、意圖種類仍然只有對方
+repo原本的3種(喝水/上廁所/求助)。
+
 ## 檔案結構
 
 ```
@@ -96,11 +137,14 @@ assistant_service/
   speech_request_queue.py   播放優先權佇列+狀態機(不依賴ROS，已用pytest驗證)
   ros_bridge.py             brain_tts_bridge.py，**沒有ROS環境測試過**，見下方說明
   api.py                    FastAPI包裝，POST /v1/speech
+  voice_io_bridge.py         把yuava22/Interactive-service-robots的規則式意圖判斷
+                            (EventDecision)轉成BrainResponse
   fallback_audio/           安全檢查失敗時的固定回覆音檔(neurlang生成的demo版本)
   cache/                    TTS Router的音檔快取(執行期產生，不進版控)
   tests/
-    test_response_controller.py    8項測試(假backend, 決定性)
+    test_response_controller.py    12項測試(假backend, 決定性)
     test_speech_request_queue.py   6項測試(佇列/優先權/狀態機)
+    test_voice_io_bridge.py        5項測試(EventDecision->BrainResponse轉換+端到端)
 ```
 
 ## Response Controller 的路由規則
@@ -184,8 +228,13 @@ curl -X POST http://127.0.0.1:8000/v1/speech -H "Content-Type: application/json"
 
 ## 還沒做的部分(照建議的實作順序，這輪只做到第一個里程碑穩固為止)
 
-- **真正的Ollama大腦+RAG**：目前是手動JSON，還沒接`intent`判斷/RAG檢索/
-  真正的LLM生成`response_zh`+`slots`那一段。
+- **真正的Ollama大腦+RAG**：`voice_io_bridge.py`接的是規則式(關鍵字比對)
+  意圖判斷，不是LLM/RAG，`slots`固定是空的(對方repo的規則不輸出結構化
+  藥物/劑量資料)——離「真正的LLM生成`response_zh`+`slots`」還有一段距離，
+  但已經是第一個真實(非手動填寫)的BrainResponse來源。
+- **`voice_io_bridge.run_from_wav()`沒有真的裝對方套件跑過**：只驗證過
+  手動建構`EventDecision`的轉換邏輯+後續管線(含真實WAV輸出)，沒有真的
+  裝`voice_io_event_detector`套件、餵Whisper辨識過的錄音檔進去過。
 - **ROS bridge沒有實機測試過**：`ros_bridge.py`是照ROS2慣例寫的，這台
   開發機沒有裝rclpy，`BrainTTSBridge`會在沒有ROS環境時主動報錯而不是
   靜默失敗——正式部署前必須先在真的ROS環境跑過。核心優先權佇列/狀態機
