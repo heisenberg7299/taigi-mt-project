@@ -2,6 +2,7 @@ venv/
 venv_meralion/
 __pycache__/
 *.pyc
+.pytest_cache/
 .DS_Store
 
 # 大型/可重新產生的檔案，不進版控
@@ -22,6 +23,8 @@ reports/errors.csv
 !docs/audio/*.wav
 # voice cloning用的參考語音，是adapter程式碼會讀取的固定資源，例外要進版控
 !tests/voice_refs/*.wav
+# Response Controller安全檢查失敗時的固定回覆音檔，是程式碼依賴的固定資源，例外要進版控
+!assistant_service/fallback_audio/*.wav
 
 # cloudflared tunnel 執行期產生的檔案（網址每次重啟會變，不該寫死進版控）
 CURRENT_TUNNEL_URL.txt
@@ -32,3 +35,6 @@ tunnel_watchdog.log
 live_test_neurlang.log
 live_test_meralion.log
 live_test_gateway.log
+
+# tw_hokkien_tts_pipeline CLI/測試執行期產生的輸出(wav+debug json)
+pipeline_output/

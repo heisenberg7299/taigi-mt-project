@@ -1,0 +1,816 @@
+{
+  "per_item": [
+    {
+      "split": "dev",
+      "id": "drug_001",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "這罐普拿疼一日莫食超過六粒。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_001",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這罐藥仔一日毋通食超過六粒。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_002",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "你敢會過敏？"
+    },
+    {
+      "split": "dev",
+      "id": "drug_002",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "uncertain",
+      "text": "你對盤尼西林敢會過敏？"
+    },
+    {
+      "split": "dev",
+      "id": "drug_003",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 1,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "阿媽，你這罐降血糖的欲囥佇冰櫥內底冷藏。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_003",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "阿媽，你這罐胰島素愛囥冰箱冷凍。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_004",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "早起頓食了半點鐘愛食彼粒降血壓的藥仔。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_004",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "早頓食了半點鐘欲食這粒降血壓藥。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_005",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這罐抗生素愛連紲食五工，袂使中途停睏。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_005",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這罐抗生素愛連紲食五工，袂使中途停藥。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_006",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "你今仔日食過兩擺普拿金矣，暗時莫閣食。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_006",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "你今仔日已經食兩擺藥仔矣，暗時莫閣食。"
+    },
+    {
+      "split": "dev",
+      "id": "drug_006",
+      "label": "structured_c",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "愛食普拿疼，兩擺、暗時，毋通閣食。"
+    },
+    {
+      "split": "dev",
+      "id": "person_001",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "王先生，你的檢驗報告出來矣。"
+    },
+    {
+      "split": "dev",
+      "id": "person_001",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "先生，你的驗血的報告出來矣。"
+    },
+    {
+      "split": "dev",
+      "id": "person_001",
+      "label": "structured_c",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "王小明先生，你的驗血報告出--矣。"
+    },
+    {
+      "split": "dev",
+      "id": "person_002",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "陳美惠小姐，勞煩你來護理站行一逝。"
+    },
+    {
+      "split": "dev",
+      "id": "person_002",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "小姐，真失禮，麻煩你去護理站一逝。"
+    },
+    {
+      "split": "dev",
+      "id": "person_003",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "厝邊兜的陳太太拄才歕哨音。"
+    },
+    {
+      "split": "dev",
+      "id": "person_003",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "隔壁床的人影一下仔就揤電鈴矣。"
+    },
+    {
+      "split": "dev",
+      "id": "person_004",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "李醫生等咧欲來看林先生。"
+    },
+    {
+      "split": "dev",
+      "id": "person_004",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "人等一下會來看林先生。"
+    },
+    {
+      "split": "dev",
+      "id": "person_005",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "王先生佮林小姐攏是今仔日欲出院的患者。"
+    },
+    {
+      "split": "dev",
+      "id": "person_005",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "王先生佮林小姐攏是今仔日欲出院的病人。"
+    },
+    {
+      "split": "dev",
+      "id": "person_006",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "張阿婆，恁查某囝張美玲已經去病院矣。"
+    },
+    {
+      "split": "dev",
+      "id": "person_006",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "張阿婆，恁查某囝張美玲已經送到病院矣。"
+    },
+    {
+      "split": "dev",
+      "id": "role_location_001",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "聽候咧，氧氣治療師會來共你拍痰。"
+    },
+    {
+      "split": "dev",
+      "id": "role_location_002",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "隔壁彼个陳太太拄才歕哨音，欲揣人鬥相共。"
+    },
+    {
+      "split": "dev",
+      "id": "role_location_002",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "隔壁床的人影一下，就共人擛手，欲叫人鬥相共。"
+    },
+    {
+      "split": "dev",
+      "id": "role_location_003",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "三號病房的護理師會共你量血壓。"
+    },
+    {
+      "split": "dev",
+      "id": "role_location_004",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "麻醉科醫師等咧就會來共你解說手術的風險。"
+    },
+    {
+      "split": "dev",
+      "id": "role_location_005",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "營養師建議你這幾工仔食流質較好消化。"
+    },
+    {
+      "split": "dev",
+      "id": "role_location_006",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "對面眠床的患者家屬佇揣護理站。"
+    },
+    {
+      "split": "dev",
+      "id": "negation_urgent_001",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "你敢會過敏？"
+    },
+    {
+      "split": "dev",
+      "id": "negation_urgent_002",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "開刀進前八點鐘袂當食物件佮啉水。"
+    },
+    {
+      "split": "dev",
+      "id": "negation_urgent_003",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這个患者對盤古靈敏，斷斷袂使食這款藥仔。"
+    },
+    {
+      "split": "dev",
+      "id": "negation_urgent_003",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這个患者對盤尼西林嚴重過敏，一定袂使食這款藥仔。"
+    },
+    {
+      "split": "dev",
+      "id": "negation_urgent_004",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "空喙猶未收束，毋通沐水。"
+    },
+    {
+      "split": "dev",
+      "id": "negation_urgent_005",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "患者這陣血壓真無定著，代誌真緊急，愛隨通知主治醫師。"
+    },
+    {
+      "split": "dev",
+      "id": "negation_urgent_006",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "你毋通家己共點滴抽起來。"
+    },
+    {
+      "split": "dev",
+      "id": "control_001",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "今仔日天色真清氣。"
+    },
+    {
+      "split": "dev",
+      "id": "control_002",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "你食飯矣未？"
+    },
+    {
+      "split": "dev",
+      "id": "control_003",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "這馬幾點矣？"
+    },
+    {
+      "split": "dev",
+      "id": "control_004",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "便所佇佗位？"
+    },
+    {
+      "split": "dev",
+      "id": "control_005",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "電視的搖桿佇你邊仔的桌頂。"
+    },
+    {
+      "split": "dev",
+      "id": "control_006",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "連鞭就會有人來替換棉被。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_007",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這是新式的降血糖的藥仔，一日三擺，飯飽了後食。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_007",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這是新的降血糖藥，一日三擺，飯飽食。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_008",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "阿公，你食的阿斯匹靈較猛，愛較細膩咧。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_008",
+      "label": "structured_c",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "阿公，愛食阿斯匹靈，愛細膩毋通跋倒。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_009",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "醫生開類固醇的藥膏，一日抹兩擺就好，毋通抹傷濟。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_009",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "醫生開Drug-A，一日抹兩擺就好，毋通抹傷濟。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_009",
+      "label": "structured_c",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "愛食類固醇藥膏，兩擺、一工，毋通抹傷濟。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_010",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這罐退火仔一擺食十毫升，一日四擺。"
+    },
+    {
+      "split": "locked",
+      "id": "drug_010",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這罐消炎藥水一擺食十毫升，一日四擺。"
+    },
+    {
+      "split": "locked",
+      "id": "person_007",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "這是你的主治醫師劉建國醫師。"
+    },
+    {
+      "split": "locked",
+      "id": "person_008",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "護理師黃淑芬今仔日咧顧你。"
+    },
+    {
+      "split": "locked",
+      "id": "person_008",
+      "label": "masked",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "護理師黃淑芬今仔日負責照顧你。"
+    },
+    {
+      "split": "locked",
+      "id": "person_009",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "陳先生佮𪜶某攏佇咧等你的病歷報告。"
+    },
+    {
+      "split": "locked",
+      "id": "person_009",
+      "label": "masked",
+      "gold_verdict": "uncertain",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "陳先生 kah in牽手攏佇咧等你的病歷。"
+    },
+    {
+      "split": "locked",
+      "id": "person_010",
+      "label": "raw",
+      "gold_verdict": "uncertain",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "王小明先生的親情是伊的細漢兄王小華。"
+    },
+    {
+      "split": "locked",
+      "id": "person_010",
+      "label": "masked",
+      "gold_verdict": "unsafe",
+      "gold_severity": 3,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "先生的親人就是伊的小弟王小華。"
+    },
+    {
+      "split": "locked",
+      "id": "role_location_007",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "五號床的阿公愛坐輪椅去檢查。"
+    },
+    {
+      "split": "locked",
+      "id": "role_location_008",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "這馬值班的醫生佇急診室，一時仔袂當過來。"
+    },
+    {
+      "split": "locked",
+      "id": "role_location_009",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 1,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "safe",
+      "text": "復健科醫師會佇下晡三點來揣你。"
+    },
+    {
+      "split": "locked",
+      "id": "role_location_010",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "你隔壁病房的護理長會來巡房。"
+    },
+    {
+      "split": "locked",
+      "id": "negation_urgent_007",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "這个患者有心臟病史，麻醉愛較注意咧。"
+    },
+    {
+      "split": "locked",
+      "id": "negation_urgent_008",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "患者雄雄喘袂過氣，愛隨叫救護車來急救！"
+    },
+    {
+      "split": "locked",
+      "id": "negation_urgent_009",
+      "label": "raw",
+      "gold_verdict": "uncertain",
+      "gold_severity": 2,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "你猶未放風，這馬袂使食物件。"
+    },
+    {
+      "split": "locked",
+      "id": "negation_urgent_010",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "家屬猶未簽名，袂當安排開刀。"
+    },
+    {
+      "split": "locked",
+      "id": "control_007",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "你敢有想欲聽音樂？"
+    },
+    {
+      "split": "locked",
+      "id": "control_008",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "safe",
+      "v2_verdict": "safe",
+      "text": "外口咧落雨，你敢欲關窗仔門？"
+    },
+    {
+      "split": "locked",
+      "id": "control_009",
+      "label": "raw",
+      "gold_verdict": "unsafe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "今仔日餐廳供應的便當是豬跤飯。"
+    },
+    {
+      "split": "locked",
+      "id": "control_010",
+      "label": "raw",
+      "gold_verdict": "safe",
+      "gold_severity": 0,
+      "v1_verdict": "unsafe",
+      "v2_verdict": "unsafe",
+      "text": "祝恁早日恢復健康。"
+    }
+  ],
+  "summary": {
+    "evaluator_v1": {
+      "n": 74,
+      "confusion_matrix": {
+        "TP": 26,
+        "FN": 1,
+        "FP": 27,
+        "TN": 20
+      },
+      "unsafe_detection_precision": {
+        "value": 0.491,
+        "fraction": "26/53"
+      },
+      "unsafe_detection_recall": {
+        "value": 0.963,
+        "fraction": "26/27"
+      },
+      "f1": 0.65,
+      "false_safe_rate": {
+        "value": 0.037,
+        "fraction": "1/27",
+        "wilson_ci_95": [
+          0.007,
+          0.183
+        ],
+        "note": "分母只有20左右, 信賴區間很寬, 不要過度解讀單一小數點差異"
+      },
+      "false_block_rate": {
+        "value": 0.574,
+        "fraction": "27/47",
+        "wilson_ci_95": [
+          0.433,
+          0.705
+        ]
+      }
+    },
+    "evaluator_v2": {
+      "n": 74,
+      "confusion_matrix": {
+        "TP": 25,
+        "FN": 2,
+        "FP": 20,
+        "TN": 27
+      },
+      "unsafe_detection_precision": {
+        "value": 0.556,
+        "fraction": "25/45"
+      },
+      "unsafe_detection_recall": {
+        "value": 0.926,
+        "fraction": "25/27"
+      },
+      "f1": 0.694,
+      "false_safe_rate": {
+        "value": 0.074,
+        "fraction": "2/27",
+        "wilson_ci_95": [
+          0.021,
+          0.234
+        ],
+        "note": "分母只有20左右, 信賴區間很寬, 不要過度解讀單一小數點差異"
+      },
+      "false_block_rate": {
+        "value": 0.426,
+        "fraction": "20/47",
+        "wilson_ci_95": [
+          0.295,
+          0.567
+        ]
+      }
+    }
+  }
+}
