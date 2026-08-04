@@ -10,12 +10,19 @@ API就好。
   3. TTS_BACKEND=meralion python3 live_test/tts_backend.py（port 5011，
      只有approved_sentences快取命中時才會真的用到）
 
+**API key驗證**：這支API會控制機器人對病患實際講什麼話，不能不設防護就
+對內網開放。用環境變數`ASSISTANT_SERVICE_API_KEY`設定，request要帶
+`X-API-Key` header。**啟動時如果沒設定這個環境變數，會印出明顯警告並
+以「完全不驗證」模式跑起來**——這是為了本機開發方便，但正式部署前一定
+要設定，不能默默用不安全的預設值上線卻沒有任何提示。
+
 執行：
   pip install fastapi uvicorn
-  python3 -m uvicorn assistant_service.api:app --host 0.0.0.0 --port 8000
+  ASSISTANT_SERVICE_API_KEY=your-secret-key python3 -m uvicorn assistant_service.api:app --host 0.0.0.0 --port 8000
 
 測試：
-  curl -X POST http://127.0.0.1:8000/v1/speech -H "Content-Type: application/json" -d '{...}'
+  curl -X POST http://127.0.0.1:8000/v1/speech \
+    -H "Content-Type: application/json" -H "X-API-Key: your-secret-key" -d '{...}'
 """
 
 from __future__ import annotations
@@ -26,7 +33,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi import Depends, FastAPI, Header, HTTPException  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
 from assistant_service import tts_router  # noqa: E402
@@ -62,13 +69,29 @@ _controller = ResponseController(
     guard=_guard, translation_backend=_backend, renderer=_renderer, tts_router=tts_router,
 )
 
+_API_KEY = os.environ.get("ASSISTANT_SERVICE_API_KEY")
+if not _API_KEY:
+    print(
+        "\n"
+        "========================================================================\n"
+        "警告: 沒有設定 ASSISTANT_SERVICE_API_KEY 環境變數，/v1/speech 完全沒有\n"
+        "身份驗證，任何連得到這個port的人都能呼叫。這支API會控制機器人對病患\n"
+        "實際講什麼話，只適合本機開發用，正式部署前必須設定這個環境變數。\n"
+        "========================================================================\n",
+    )
+
+
+def verify_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    if _API_KEY and x_api_key != _API_KEY:
+        raise HTTPException(status_code=401, detail="缺少或錯誤的 X-API-Key")
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
-@app.post("/v1/speech")
+@app.post("/v1/speech", dependencies=[Depends(verify_api_key)])
 def speech(payload: BrainResponseIn):
     brain_response = BrainResponse.from_dict(payload.model_dump())
     try:

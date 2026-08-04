@@ -59,8 +59,38 @@ _SLOT_TO_INTENT_FIELD = {
 }
 
 # 交叉比對時要檢查的slot欄位：如果大腦自己給的這些值沒出現在它自己生成的
-# response_zh裡，代表大腦內部就已經不一致，不用等翻譯完才發現問題
+# response_zh(翻譯前)或hanji_text(翻譯後)裡，代表內容不一致
 _CROSS_CHECK_SLOT_KEYS = ("drug", "dose", "time", "person")
+
+# 風險分級不能只靠大腦(LLM)自己判斷——這裡用規則式邏輯做「只能往上拉、
+# 不能往下降」的強制升級：slots出現這些欄位、或intent含這些關鍵字，
+# 不管大腦自己標的risk_level寫什麼，一律視為high。這是刻意的單向規則：
+# 大腦說high就一定是high(不會被降級)，大腦說low/medium但內容看起來像
+# 醫囑相關，也一律拉到high——風險分級本身不該是機率性的判斷。
+_HIGH_RISK_SLOT_KEYS = ("drug", "dose", "negation")
+_HIGH_RISK_INTENT_KEYWORDS = (
+    "medication", "drug", "allergy", "emergency", "chest_pain", "pain",
+    "breathing", "nurse", "medical_order", "dosage", "allergic",
+)
+
+
+def enforce_deterministic_risk_level(brain_response: BrainResponse) -> str:
+    """回傳實際要拿來路由用的risk_level, 只會比brain_response.risk_level
+    更高或相等, 絕不會更低。呼叫方應該用這個回傳值做路由判斷, 不要直接
+    用brain_response.risk_level。"""
+    if brain_response.risk_level == "high":
+        return "high"
+
+    for key in _HIGH_RISK_SLOT_KEYS:
+        value = brain_response.slots.get(key)
+        if value not in (None, False, ""):
+            return "high"
+
+    intent_lower = (brain_response.intent or "").lower()
+    if any(keyword in intent_lower for keyword in _HIGH_RISK_INTENT_KEYWORDS):
+        return "high"
+
+    return brain_response.risk_level
 
 
 @dataclass
@@ -100,28 +130,38 @@ def slots_to_structured_intent(brain_response: BrainResponse) -> StructuredInten
     return StructuredIntent(**kwargs)
 
 
-def cross_check_slots_vs_response(brain_response: BrainResponse) -> list[str]:
-    """檢查response_zh有沒有跟slots矛盾。"""
-    if not brain_response.response_zh:
+def cross_check_slots_vs_text(brain_response: BrainResponse, text: str | None, stage: str) -> list[str]:
+    """檢查某個階段的文字(翻譯前的response_zh, 或翻譯後的hanji_text)有沒有
+    跟slots矛盾。stage只是拿來寫進錯誤訊息方便除錯, 不影響邏輯。"""
+    if not text:
         return []
     issues = []
     for key in _CROSS_CHECK_SLOT_KEYS:
         value = brain_response.slots.get(key)
-        if value and str(value) not in brain_response.response_zh:
-            issues.append(f"slots.{key}={value!r} 沒有出現在 response_zh 裡")
+        if value and str(value) not in text:
+            issues.append(f"[{stage}] slots.{key}={value!r} 沒有出現在文字裡: {text!r}")
     return issues
 
 
-def _abstain(brain_response: BrainResponse, reason: str) -> ControllerResult:
+def _fail_safe(brain_response: BrainResponse, status: str, reason: str) -> ControllerResult:
+    """安全fallback: 不管是JSON格式問題(status="rejected")還是翻譯/安全
+    檢查問題(status="abstained")，**都要**播放固定回覆並通知護理師，不能
+    因為是「格式錯誤」這種看似比較不重要的問題就默默跳過、不留下語音/
+    稽核紀錄。status欄位保留區分是為了方便事後查log分辨問題類型，但
+    action/audio_path這些「要不要有實際反應」的欄位兩種狀況必須一致。"""
     return ControllerResult(
         request_id=brain_response.request_id,
-        status="abstained",
+        status=status,
         action="call_nurse",
         hanji_text=FALLBACK_SENTENCE_HAN,
         audio_path=FALLBACK_AUDIO_PATH if os.path.exists(FALLBACK_AUDIO_PATH) else FALLBACK_AUDIO_NAME,
         tts_backend="cached_fallback",
         errors=[reason],
     )
+
+
+def _abstain(brain_response: BrainResponse, reason: str) -> ControllerResult:
+    return _fail_safe(brain_response, status="abstained", reason=reason)
 
 
 class ResponseController:
@@ -132,11 +172,15 @@ class ResponseController:
         self.tts_router = tts_router
 
     def handle(self, brain_response: BrainResponse) -> ControllerResult:
-        # 1. 驗證JSON欄位
+        # 1. 驗證JSON欄位。驗證失敗一樣要走安全fallback(播固定回覆+通知
+        #    護理師)，不能因為是「格式問題」就默默跳過、什麼反應都沒有——
+        #    等真的接上LLM之後，LLM輸出格式錯誤/缺欄位是會實際發生的情境，
+        #    不是只有翻譯安全檢查失敗才需要fail-safe。
         validation_errors = brain_response.validate()
         if validation_errors:
-            return ControllerResult(
-                request_id=brain_response.request_id, status="rejected", errors=validation_errors,
+            return _fail_safe(
+                brain_response, status="rejected",
+                reason=f"BrainResponse格式驗證失敗: {validation_errors}",
             )
 
         # action != "speak" 的直接處理, 不需要翻譯/TTS
@@ -145,20 +189,27 @@ class ResponseController:
                 request_id=brain_response.request_id, status="completed", action=brain_response.action,
             )
 
-        # 2. 比對response_zh跟slots
-        mismatch = cross_check_slots_vs_response(brain_response)
+        # 2. 風險分級不能只信任大腦(LLM)自己標的risk_level——用規則式邏輯
+        #    強制只能升級、不能降級, 避免LLM誤判把該擋的高風險內容標成
+        #    medium/low而繞過Structured C。往後全部用effective_risk_level
+        #    做路由判斷, 不要再直接用brain_response.risk_level。
+        effective_risk_level = enforce_deterministic_risk_level(brain_response)
+
+        # 3. 比對response_zh跟slots(翻譯前)
+        mismatch = cross_check_slots_vs_text(brain_response, brain_response.response_zh, stage="翻譯前")
         if mismatch:
             return _abstain(brain_response, f"大腦回覆的response_zh跟slots不一致: {mismatch}")
 
-        # 3. 風險路由
+        # 4. 風險路由
         try:
-            if brain_response.risk_level == "high":
+            if effective_risk_level == "high":
                 structured_intent = slots_to_structured_intent(brain_response)
                 if not self.renderer.can_handle(structured_intent):
                     return _abstain(
                         brain_response,
-                        f"高風險intent「{brain_response.intent}」沒有對應的Structured C模板，"
-                        "不允許讓LLM自由翻譯決定最終文字",
+                        f"高風險intent「{brain_response.intent}」(effective_risk_level="
+                        f"{effective_risk_level}, 原始risk_level={brain_response.risk_level})"
+                        "沒有對應的Structured C模板，不允許讓LLM自由翻譯決定最終文字",
                     )
                 hanji_text = self.renderer.render(structured_intent, self.translation_backend)
                 method = "structured_c"
@@ -181,7 +232,14 @@ class ResponseController:
         except UnsafeTranslationError as exc:
             return _abstain(brain_response, f"翻譯安全檢查未通過(候選A/B/C皆未通過): {exc}")
 
-        # 4. TTS
+        # 5. 翻譯後再對最終真正要拿去合成語音的文字比對一次slots——只在
+        #    翻譯前檢查不夠，翻譯過程本身(不管是LLM候選A/B還是理論上不該
+        #    出錯的候選C)都可能引入新的錯誤(誤譯藥名、劑量單位跑掉)。
+        post_mismatch = cross_check_slots_vs_text(brain_response, hanji_text, stage="翻譯後")
+        if post_mismatch:
+            return _abstain(brain_response, f"翻譯後的台語文字跟slots不一致: {post_mismatch}")
+
+        # 6. TTS
         if self.tts_router is None:
             return ControllerResult(
                 request_id=brain_response.request_id, status="completed",

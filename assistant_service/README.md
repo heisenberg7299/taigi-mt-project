@@ -18,6 +18,64 @@ Whisper/按鈕輸入
 核心原則：**大腦負責「要回答什麼」，這裡負責「能不能安全說、怎麼翻成
 台語、用什麼聲音播放」**。
 
+## Code review後修正過的4個問題(2026-08-04)
+
+有人只看文字描述(沒看程式碼)review過一次，點出4個從描述本身就看得出來
+的漏洞，逐一核對程式碼後確認全部屬實，已修正：
+
+1. **風險分級原本完全信任輸入JSON的`risk_level`，沒有任何規則式檢查**。
+   一旦接上真的LLM，LLM可以自己說「這是low risk」然後繞過
+   `StructuredMedicalRenderer`。修正：新增`enforce_deterministic_risk_level()`，
+   只能把等級往上拉(low/medium→high)、絕不會往下降——`slots`裡出現
+   `drug`/`dose`/`negation`任一個、或`intent`含醫療相關關鍵字，一律強制
+   視為high，不管大腦自己標的值是什麼。
+2. **原本只在翻譯前比對`response_zh`跟`slots`，翻譯後(`hanji_text`)完全
+   沒有再檢查**，翻譯過程本身引入的錯誤會漏網。修正：翻譯完成後、TTS
+   合成之前，再對最終`hanji_text`跟`slots`交叉比對一次。
+3. **Schema驗證失敗(`status="rejected"`)原本不會觸發任何反應**——不播放
+   固定回覆、不通知護理師，就是回一個JSON錯誤然後結束。修正：新增
+   `_fail_safe()`，格式問題(`rejected`)跟翻譯/安全問題(`abstained`)一樣
+   都會播放固定回覆+`action="call_nurse"`，`status`欄位保留區分只是方便
+   查log，不影響「有沒有實際反應」。同時發現`BrainResponse.from_dict()`
+   原本用`d["request_id"]`這種必要欄位直接索引，缺欄位時會raise
+   `KeyError`直接讓程式crash(不會走到`validate()`)，一併改成`.get()`。
+4. **`POST /v1/speech`原本零驗證**，任何連得到port的人都能呼叫，控制
+   機器人對病患講什麼話卻沒有身份驗證。修正：加上`X-API-Key` header
+   驗證(環境變數`ASSISTANT_SERVICE_API_KEY`設定)，沒設定時會印出明顯
+   警告並以不驗證模式跑(方便本機開發，但正式部署前必須設定)。
+
+新增8項測試涵蓋這4個修正(風險升級不降級、翻譯後比對、格式驗證失敗仍有
+fallback、from_dict不會crash)，加上原本的全部46項測試通過。
+
+## 這次review還沒動的部分(不是忽略，是需要更大投入或不同專業)
+
+- **StructuredMedicalRenderer的模板內容有沒有醫療專業審核過**：目前完全
+  沒有——這是工程手段補不了的，藥名/劑量/模板文字都需要藥師/護理師審核
+  過的詞庫，不是這次架構修正的範圍。已經在`structured_renderer.py`跟
+  fallback句子的說明裡明確標示「demo等級，尚未審核」，但**沒有審核過的
+  內容，再嚴謹的架構保護的也是未經驗證的東西**，這點必須在正式使用前
+  處理，不能靠程式碼解決。
+- **`/nurse_alert`通知本身送出去之後，沒有重試機制或送達確認**：如果
+  ROS訊息發布當下網路斷線或護理站系統掛掉，目前沒有任何重試或落地稽核
+  紀錄，系統會誤以為已經安全交接。這需要接上真的訊息佇列/持久化紀錄
+  機制，目前的`ros_bridge.py`只是單次publish。
+- **多病患情境下的病患對應正確性沒有驗證過**：`slots.person`目前只是
+  自由文字，沒有跟真正的病患資料庫/病患ID做比對，無法保證「這次回覆的
+  病患」真的對應到`slots`裡講的那個人。目前所有測試都是單一情境，多
+  病患部署前這塊需要獨立設計(例如強制`slots`帶`patient_id`、跟資料庫
+  查詢比對，不能只靠文字姓名比對)。
+- **Candidate A/B/C的通過標準**：`entities_ok`(候選文字裡是否包含
+  Protected Token保護的實體原文)**且**`safety_ok`(`scripts/safety_checks.py`
+  的五層檢查：否定詞/數字一致性/醫療術語白名單/長度異常/陷阱字，全部
+  通過)兩者都成立才算「通過」，不是只看格式對不對。詳細順序邏輯在
+  `tw_hokkien_tts_pipeline/adaptive_translation.py`的
+  `translate_with_structured_fallback()`：候選A(原文)先試，通過就直接用；
+  沒通過才試候選B(遮罩)；還沒通過、且屬於已支援的intent才用候選C；三個
+  都沒通過才丟`UnsafeTranslationError`。
+- **ROS bridge仍然沒有實機測試過**，這點在程式碼跟上次的說明裡已經強調
+  過，這裡重申：正式接上機器人前一定要先在真的ROS環境跑過整合測試，
+  尤其涉及機器人靠近病患的物理動作路徑，不能只靠這次的單元測試就上線。
+
 ## 目前進度：第一個里程碑已完成並實測
 
 「手動JSON → Response Controller → 安全翻譯 → Neurlang → 真實WAV」這條路

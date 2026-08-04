@@ -30,10 +30,15 @@ class BrainResponse:
 
     @classmethod
     def from_dict(cls, d: dict) -> "BrainResponse":
+        """故意全部用.get()而不是d["key"]這種必要欄位直接索引：大腦(尤其
+        是接上真正的LLM之後)輸出的JSON不保證每個欄位都存在，這個函式必須
+        在欄位缺漏時也能建構出一個(不合法但不會crash的)BrainResponse物件，
+        讓後面的validate()有機會正常回報「哪裡有問題」，而不是讓程式在
+        還沒走到驗證邏輯之前就先丟出未預期的例外中止掉。"""
         return cls(
-            request_id=d["request_id"],
-            intent=d["intent"],
-            risk_level=d["risk_level"],
+            request_id=d.get("request_id") or "",
+            intent=d.get("intent") or "",
+            risk_level=d.get("risk_level") or "",
             language=d.get("language", "zh-TW"),
             response_zh=d.get("response_zh"),
             slots=d.get("slots") or {},
