@@ -32,6 +32,14 @@ TMP_DIR = "/tmp/taigi_tts_backend"
 
 os.makedirs(TMP_DIR, exist_ok=True)
 
+# 2026-10-19修正：TMP_DIR原本只在模組載入(伺服器啟動)當下建立一次。這個
+# server process可能長時間存活(這次實測發現同一個process從9月跑到10月，
+# 中途系統把/tmp底下久未使用的目錄清掉了)，之後每次/synthesize都會因為
+# 目錄不存在而寫檔失敗(soundfile.LibsndfileError: System error)，且錯誤
+# 訊息本身完全看不出是「目錄不見了」——實測到的真實bug，不是假設性的。
+# 改成每次要寫檔前都確保目錄存在，讓伺服器對這種情況能自我修復，不需要
+# 手動重啟process。
+
 app = Flask(__name__)
 _synth = None
 _meralion_model = None
@@ -76,6 +84,7 @@ def synthesize():
     han = (request.json or {}).get("han", "").strip()
     if not han:
         return jsonify({"error": "empty text"}), 400
+    os.makedirs(TMP_DIR, exist_ok=True)  # 見上方TMP_DIR修正記錄，自我修復目錄被清掉的情況
     out_path = os.path.join(TMP_DIR, f"{uuid.uuid4().hex}.wav")
     if TTS_BACKEND == "meralion":
         import soundfile as sf
