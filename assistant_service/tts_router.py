@@ -25,6 +25,19 @@ FORCE_MERALION=1`開啟，**預設不開**——不想承擔這個效能代價�
 影響，原本的智慧路由邏輯(規則1/2/3)一行都沒改，只是在前面多加一個
 使用者自己選擇性開啟的覆蓋開關。開啟後每句話都要等好幾秒到十幾秒才會
 出聲，這是已經讓使用者知情後的取捨，不是自動判斷「這樣比較好」。
+
+## 快取key修正：同一句話要分backend各自快取(2026-10-19修正)
+
+使用者實際回報「網頁版的聲音聽起來跟另一個比較工具不一樣」，追查發現
+一個真實bug：原本`_cache_key()`只對文字內容算hash，**不管這句話是
+neurlang還是MERaLiON生成的，快取檔名都一樣**。代表如果某句話在開啟
+`ASSISTANT_SERVICE_FORCE_MERALION`**之前**就已經被neurlang生成過、
+存進快取，開啟這個環境變數之後再問同一句話，會直接命中那個舊的
+neurlang快取、完全不會重新呼叫MERaLiON——使用者以為自己在聽MERaLiON，
+實際上聽到的是舊快取裡的neurlang聲音。
+
+修正：快取key改成`hash(backend + ":" + text)`，同一句話在neurlang跟
+MERaLiON底下會各自存成不同的快取檔案，不會互相蓋過或誤用對方的結果。
 """
 
 from __future__ import annotations
@@ -53,12 +66,14 @@ class TTSRouteResult:
     from_cache: bool
 
 
-def _cache_key(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+def _cache_key(backend: str, text: str) -> str:
+    # backend一定要納入hash，不然同一句話在neurlang/MERaLiON底下會共用
+    # 同一個快取檔案、互相蓋過對方的結果——見模組docstring「快取key修正」
+    return hashlib.sha256(f"{backend}:{text}".encode("utf-8")).hexdigest()
 
 
-def cached_audio_path(text: str) -> Path | None:
-    path = CACHE_DIR / f"{_cache_key(text)}.wav"
+def cached_audio_path(backend: str, text: str) -> Path | None:
+    path = CACHE_DIR / f"{_cache_key(backend, text)}.wav"
     return path if path.exists() else None
 
 
@@ -119,21 +134,19 @@ def _call_backend(text: str, backend: str) -> bytes:
 
 
 def route_and_synthesize(text: str) -> TTSRouteResult:
-    cached = cached_audio_path(text)
+    # 先決定這句話「這次」該用哪個backend，再用backend-aware的key查/寫快取
+    # ——不能反過來先查快取再決定backend，不然backend切換(approved清單
+    # 變動、FORCE_MERALION開關)時會誤用另一個backend留下的舊快取檔案，
+    # 見模組docstring「快取key修正」的真實案例。
+    backend = "meralion" if (is_approved_common_sentence(text) or _force_meralion_enabled()) else "neurlang"
+
+    cached = cached_audio_path(backend, text)
     if cached is not None:
-        return TTSRouteResult(backend="meralion_cached", audio_path=cached, from_cache=True)
+        cached_label = "meralion_cached" if backend == "meralion" else "neurlang_cached"
+        return TTSRouteResult(backend=cached_label, audio_path=cached, from_cache=True)
 
-    out_path = CACHE_DIR / f"{_cache_key(text)}.wav"
-
-    if is_approved_common_sentence(text) or _force_meralion_enabled():
-        audio_bytes = _call_backend(text, "meralion")
-        out_path.write_bytes(audio_bytes)
-        return TTSRouteResult(backend="meralion_fresh_cached", audio_path=out_path, from_cache=False)
-
-    audio_bytes = _call_backend(text, "neurlang")
-    # 動態句子也寫進同一個快取資料夾(用內容雜湊當檔名)，這樣如果剛好被
-    # 使用者問到同一句兩次，第二次一樣直接命中快取，不用重新呼叫neurlang；
-    # 這跟「approved_sentences」是兩件事——這裡只是省重複運算，不代表這句
-    # 話被人工審核過。
+    out_path = CACHE_DIR / f"{_cache_key(backend, text)}.wav"
+    audio_bytes = _call_backend(text, backend)
     out_path.write_bytes(audio_bytes)
-    return TTSRouteResult(backend="neurlang_realtime", audio_path=out_path, from_cache=False)
+    fresh_label = "meralion_fresh_cached" if backend == "meralion" else "neurlang_realtime"
+    return TTSRouteResult(backend=fresh_label, audio_path=out_path, from_cache=False)

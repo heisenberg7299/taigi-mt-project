@@ -105,7 +105,10 @@ def test_force_meralion_env_var_defaults_to_off(_isolated_cache, monkeypatch):
 
 def test_route_and_synthesize_hits_cache_on_second_call_without_calling_backend_again(_isolated_cache):
     """第二次問同一句話(不管approved與否)應該直接命中快取，不用重新呼叫
-    任何TTS backend——見tts_router.py docstring路由規則第1條。"""
+    任何TTS backend——見tts_router.py docstring路由規則第1條。這句話不在
+    approved清單裡、也沒開FORCE_MERALION，所以兩次都該是neurlang，快取
+    命中的標籤也該誠實反映這一點(不是像修正前那樣不管哪個backend生成的
+    都寫死"meralion_cached")。"""
     with patch.object(tts_router, "_call_backend", return_value=b"fake-wav-bytes") as mock_call:
         first = tts_router.route_and_synthesize("重複問的話")
         second = tts_router.route_and_synthesize("重複問的話")
@@ -113,9 +116,34 @@ def test_route_and_synthesize_hits_cache_on_second_call_without_calling_backend_
     mock_call.assert_called_once()  # 只呼叫過一次，第二次直接命中快取
     assert first.audio_path == second.audio_path
     assert second.from_cache is True
-    assert second.backend == "meralion_cached"
+    assert second.backend == "neurlang_cached"
+
+
+def test_switching_to_force_meralion_does_not_reuse_stale_neurlang_cache(_isolated_cache, monkeypatch):
+    """2026-10-19迴歸測試：這是使用者實際回報「網頁版聲音聽起來跟比較
+    工具不一樣」的根因。情境：某句話先在FORCE_MERALION關閉的狀態下被
+    neurlang生成並快取，之後才開啟FORCE_MERALION——修正前會直接命中
+    那個舊的neurlang快取(快取key不分backend)，使用者以為自己聽到
+    MERaLiON的聲音，實際上聽到的是舊的neurlang聲音。"""
+    monkeypatch.delenv("ASSISTANT_SERVICE_FORCE_MERALION", raising=False)
+    with patch.object(tts_router, "_call_backend", return_value=b"neurlang-version") as mock_call:
+        before = tts_router.route_and_synthesize("同一句話之後會切換引擎")
+    assert before.backend == "neurlang_realtime"
+    mock_call.assert_called_once_with("同一句話之後會切換引擎", "neurlang")
+
+    monkeypatch.setenv("ASSISTANT_SERVICE_FORCE_MERALION", "1")
+    with patch.object(tts_router, "_call_backend", return_value=b"meralion-version") as mock_call:
+        after = tts_router.route_and_synthesize("同一句話之後會切換引擎")
+
+    mock_call.assert_called_once_with("同一句話之後會切換引擎", "meralion")  # 真的重新呼叫了MERaLiON，不是沿用舊快取
+    assert after.backend == "meralion_fresh_cached"
+    assert after.from_cache is False
+    assert after.audio_path != before.audio_path  # 兩個backend各自存成不同的快取檔案
+    assert after.audio_path.read_bytes() == b"meralion-version"
+    assert before.audio_path.read_bytes() == b"neurlang-version"  # 舊的neurlang快取沒有被覆蓋掉，仍然存在
 
 
 def test_cache_key_is_stable_and_content_addressed():
-    assert tts_router._cache_key("同一句話") == tts_router._cache_key("同一句話")
-    assert tts_router._cache_key("句子A") != tts_router._cache_key("句子B")
+    assert tts_router._cache_key("neurlang", "同一句話") == tts_router._cache_key("neurlang", "同一句話")
+    assert tts_router._cache_key("neurlang", "句子A") != tts_router._cache_key("neurlang", "句子B")
+    assert tts_router._cache_key("neurlang", "同一句話") != tts_router._cache_key("meralion", "同一句話")
