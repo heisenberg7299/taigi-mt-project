@@ -1,0 +1,19 @@
+surface,reading,source,reason,verified
+的,e5,pronunciation_overrides.py,語料庫掃描直接觀察自「你的藥仔提著未」正確輸出(見pronunciation_overrides.py CHARACTER_IPA_OVERRIDES),true
+咧,leh4,pronunciation_overrides.py,語料庫掃描錯誤12/18次(見pronunciation_overrides.py CHARACTER_IPA_OVERRIDES),true
+毋,m7,pronunciation_overrides.py,語料庫掃描錯誤48/48次(見pronunciation_overrides.py CHARACTER_IPA_OVERRIDES),true
+較,khah4,pronunciation_overrides.py,語料庫掃描錯誤8/25次(見pronunciation_overrides.py CHARACTER_IPA_OVERRIDES),true
+袂,bue7,pronunciation_overrides.py,語料庫掃描錯誤7/21次(見pronunciation_overrides.py CHARACTER_IPA_OVERRIDES),true
+敲,kha3,pronunciation_overrides.py,全語料庫掃描錯誤21/95次第二批-2026-08-07(見pronunciation_overrides.py CHARACTER_IPA_OVERRIDES),true
+欲,beh4,公開標準辭典常見讀音,未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+仔,a2,公開標準辭典常見讀音,未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+矣,ah4,公開標準辭典常見讀音(句尾語氣詞),未經驗證且矣實際口語常輕聲化為--ah數字調系統下正確表示法本身有爭議信心較低,false
+恁,lin2,公開標準辭典常見讀音,未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+佇,ti7,公開標準辭典常見讀音,未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+个,e5,公開標準辭典常見讀音(量詞用法同的字e5),未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+予,hoo7,公開標準辭典常見讀音,未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+𤆬,tshua7,公開標準辭典常見讀音,未經驗證且罕見字信心更低,false
+喙,tshui3,公開標準辭典常見讀音(嘴巴),未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+跤,kha1,公開標準辭典常見讀音(腳),未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+蹛,tua3,公開標準辭典常見讀音(住),未經此專案語料或母語者驗證只是常見公版讀音的推測值,false
+啉,lim1,公開標準辭典常見讀音(喝),未經此專案語料或母語者驗證只是常見公版讀音的推測值,false

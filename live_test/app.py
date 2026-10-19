@@ -67,6 +67,21 @@ def synthesize(han, backend):
     return filename
 
 
+def resolve_pronunciation(han, backend):
+    """呼叫tts_backend.py的/resolve_debug，取得這句話裡多音字的發音決策
+    過程(用ChhoeTaigi辭典+這學期母語者黃金標準，不是github上那張
+    pronunciation_overrides.py固定表)。只有neurlang後端會真的用到這套
+    決策器，MERaLiON後端呼叫仍會回應，但entries固定是空的。失敗時不擋
+    主流程(語音合成)，只是這次沒有決策說明可以顯示。"""
+    port = BACKEND_PORTS[backend]
+    try:
+        resp = requests.post(f"http://127.0.0.1:{port}/resolve_debug", json={"han": han}, timeout=30)
+        resp.raise_for_status()
+        return resp.json().get("entries", [])
+    except Exception:
+        return []
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = None
@@ -83,7 +98,11 @@ def index():
             try:
                 han = translate(zh)
                 filename = synthesize(han, backend)
-                result = {"zh": zh, "han": han, "audio_url": f"/static/audio/{filename}", "backend": backend}
+                pronunciation_entries = resolve_pronunciation(han, backend)
+                result = {
+                    "zh": zh, "han": han, "audio_url": f"/static/audio/{filename}",
+                    "backend": backend, "pronunciation_entries": pronunciation_entries,
+                }
             except requests.exceptions.ConnectionError as exc:
                 if "11434" in str(exc):
                     error = "連不到 Ollama，請確認 Ollama 有在跑（ollama serve）"

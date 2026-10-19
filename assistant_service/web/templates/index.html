@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多語言系統</title>
+<style>
+  /* 設計語言參考Apple.com的排版原則(留白、字級層次對比、極簡分段控制項、
+     用陰影而非邊框做卡片分層)，調整套用到這個功能性對話介面上——不是行銷
+     頁面，所以不需要大圖/巨幅標題，但留白節奏、字重對比、分段控制項的
+     做法可以直接借用。配色維持這個系統原本的醫療綠(不套用Apple自己的
+     品牌藍)，只調整「怎麼排版」，不是「用什麼顏色代表誰」。 */
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --card-quick: #ffffff;
+    --card-quick-hover: #f9f9fb;
+    --green: #2f7a52;
+    --green-dark: #1f5c3c;
+    --green-tint: #e9f4ee;
+    --ink: #1d1d1f;
+    --ink-soft: #6e6e73;
+    --ink-faint: #a1a1a6;
+    --line: #e5e5e7;
+    --line-soft: #ededf0;
+    --bubble-user: var(--green-tint);
+    --bubble-bot: #ffffff;
+    --risk-high: #c0392b;
+    --risk-medium: #b3701f;
+    --risk-low: #2f7a52;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --radius-sm: 11px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%; overflow: hidden; /* 整頁不捲動，只有中間對話區塊會捲動，見.chat-log */
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--ink); margin: 0; -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--green-tint); color: var(--green-dark); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #d8d1bf; border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* 整體用固定視窗高度的flex欄位排版：上面(標題/狀態列/語言切換/常用需求)
+     跟下面(輸入列)固定不動，只有中間.chat-log會超出時捲動——這樣常用需求
+     卡片跟語言切換永遠點得到，不用使用者一直往下滑才能回到最上面。 */
+  .wrap {
+    max-width: 860px; margin: 0 auto; height: 100%;
+    display: flex; flex-direction: column; padding: 2rem 2.2rem 1.2rem;
+  }
+  .top-section { flex: 0 0 auto; }
+  /* 標題字級刻意拉大、字重拉重、字距收緊——大跳躍的字級對比(而不是
+     1.1x/1.2x的漸進放大)是Apple排版慣用的層次做法，讓標題明顯是
+     「這個畫面在講什麼」，副標題則刻意用較輕的字重退到背景。 */
+  h1 {
+    font-size: 2.3rem; margin: 0 0 0.35rem; font-weight: 700; letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .subtitle {
+    color: var(--ink-soft); font-size: 1.02rem; font-weight: 400; margin: 0 0 1.3rem;
+    line-height: 1.5; letter-spacing: -0.005em; max-width: 46ch;
+  }
+
+  .status-bar {
+    font-size: 0.74rem; color: var(--ink-faint); background: transparent;
+    border: none; box-shadow: none;
+    padding: 0 0.1rem; margin-bottom: 1.4rem;
+    display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: center;
+  }
+  .status-bar .off { color: var(--risk-high); font-weight: 600; }
+  .status-bar .on { color: var(--green); font-weight: 600; }
+
+  /* 語言切換做成單一軌道的分段控制項(iOS/macOS常見的segmented control
+     樣式)：淺灰底盤、選中的項目浮成白色藥丸+陰影，取代各自獨立的按鈕——
+     這是Apple介面裡辨識度很高的一種「同一組互斥選項」呈現方式。 */
+  .lang-toggle { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.3rem; flex-wrap: wrap; }
+  .segmented {
+    display: inline-flex; background: #ebebee; border-radius: 999px; padding: 3px; gap: 2px;
+  }
+  .lang-btn {
+    border: none; background: transparent; color: var(--ink-soft); padding: 0.4rem 1.15rem;
+    border-radius: 999px; cursor: pointer; font-size: 0.87rem; font-weight: 590;
+    transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease), background 0.2s, color 0.2s;
+  }
+  .lang-btn.active {
+    background: #ffffff; color: var(--ink);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 1px 1px rgba(0, 0, 0, 0.08);
+  }
+  /* 次要操作(開講/查詢/自動朗讀/清除紀錄)刻意做成極簡的純文字ghost
+     button——不加外框、不加底色，只靠顏色/字重表示狀態，符合Apple介面
+     偏好「次要動作看起來像連結、不要跟主要動作搶視覺份量」的慣例。 */
+  .mode-cluster { display: inline-flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
+  .mode-btn {
+    border: none; background: transparent; color: var(--ink-soft); padding: 0.3rem 0.2rem;
+    cursor: pointer; font-size: 0.85rem; font-weight: 590;
+    transition: color 0.2s, opacity 0.15s;
+  }
+  .mode-btn:hover { color: var(--green); }
+  .mode-btn:active { opacity: 0.6; }
+  .mode-btn.active { color: var(--green); }
+
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 1.1rem; }
+  @media (min-width: 560px) { .quick-grid { grid-template-columns: 1fr 1fr 1fr; } }
+  .quick-card {
+    background: var(--card-quick); border: none; border-radius: var(--radius-md);
+    padding: 1rem 1.05rem; text-align: left; cursor: pointer; font-family: inherit;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), background 0.18s;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+  }
+  .quick-card:hover { background: var(--card-quick-hover); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .quick-card:active { transform: translateY(0) scale(0.97); }
+  .quick-card .icon { line-height: 1; margin-top: 0.1rem; flex: 0 0 auto; color: var(--green-dark); }
+  .icon-btn svg, .btn svg, .mode-btn svg { vertical-align: -2px; }
+  .quick-card .title { font-weight: 700; font-size: 0.95rem; }
+  .quick-card .example { font-size: 0.77rem; color: var(--ink-soft); margin-top: 0.2rem; }
+
+  .hint-bubble {
+    background: var(--card); border: none; border-radius: var(--radius-sm);
+    padding: 0.65rem 0.9rem; font-size: 0.83rem; color: var(--ink-soft); margin-bottom: 0.8rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .chat-log {
+    display: flex; flex-direction: column; gap: 0.85rem;
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; /* 唯一會捲動的區域 */
+    padding: 0.4rem 0.15rem 0.6rem; margin-bottom: 0.7rem;
+    mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 8px), transparent 100%);
+  }
+  .msg-row { display: flex; animation: bubble-in 0.28s var(--ease) both; }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.bot { justify-content: flex-start; }
+  @keyframes bubble-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .bubble {
+    max-width: 82%; border-radius: var(--radius-md); padding: 0.75rem 0.95rem; font-size: 0.94rem; line-height: 1.6;
+  }
+  .bubble.user { background: var(--bubble-user); border-bottom-right-radius: 6px; }
+  .bubble.bot { background: var(--bubble-bot); border: none; border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm); }
+  .bubble .meta { font-size: 0.71rem; color: var(--ink-faint); margin-top: 0.4rem; }
+  .bubble .actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+  .icon-btn {
+    border: none; background: var(--line-soft); color: var(--ink-soft); border-radius: 999px; width: 1.95rem; height: 1.95rem;
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem;
+    transition: transform 0.15s var(--ease), background 0.2s, color 0.2s;
+  }
+  .icon-btn:hover { transform: translateY(-1px); background: var(--green-tint); color: var(--green-dark); }
+  .icon-btn:active { transform: translateY(0) scale(0.92); }
+  .steps-box {
+    background: var(--green-tint); border: none; border-radius: var(--radius-sm);
+    padding: 0.7rem 0.9rem; margin-top: 0.6rem;
+  }
+  .steps-box .steps-title { font-weight: 700; font-size: 0.84rem; margin-bottom: 0.35rem; color: var(--green-dark); }
+  .steps-box ol { margin: 0; padding-left: 1.15rem; font-size: 0.85rem; line-height: 1.6; }
+
+  .typing-dots { display: inline-flex; gap: 3px; align-items: center; padding: 0.1rem 0; }
+  .typing-dots span {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint);
+    animation: typing-bounce 1.1s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+  .risk-high { color: var(--risk-high); font-weight: 700; }
+  .risk-medium { color: var(--risk-medium); font-weight: 700; }
+  .risk-low { color: var(--risk-low); font-weight: 700; }
+
+  .detail-panel {
+    margin-top: 0.6rem; background: #fafafa; border: none; border-radius: var(--radius-sm);
+    padding: 0.65rem 0.85rem; font-size: 0.78rem; color: var(--ink-soft);
+  }
+  .detail-panel .field { margin-bottom: 0.3rem; }
+  .detail-panel pre {
+    white-space: pre-wrap; word-break: break-word; margin: 0.25rem 0 0; font-size: 0.73rem;
+    background: #fff; border: none; border-radius: 8px; padding: 0.45rem 0.55rem;
+  }
+  audio.inline-audio { display: none; }
+
+  .input-row {
+    background: var(--card); border: none; border-radius: var(--radius-lg); padding: 0.85rem 0.95rem;
+    box-shadow: var(--shadow-md); transition: box-shadow 0.2s;
+  }
+  .input-row:focus-within { box-shadow: 0 0 0 4px var(--green-tint), var(--shadow-md); }
+  .input-row textarea {
+    width: 100%; border: none; resize: none; font-size: 1rem; font-family: inherit;
+    outline: none; background: transparent; min-height: 2.4rem; color: var(--ink);
+  }
+  .input-row textarea::placeholder { color: var(--ink-faint); }
+  .input-row .btn-row { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
+  .btn {
+    border: none; background: var(--line-soft); color: var(--ink); padding: 0.55rem 1.15rem;
+    border-radius: 999px; cursor: pointer; font-size: 0.85rem; font-weight: 590;
+    transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), background 0.2s;
+  }
+  .btn:hover { transform: translateY(-1px); background: #e2e2e6; }
+  .btn:active { transform: translateY(0) scale(0.96); }
+  .btn.primary {
+    background: var(--green); color: #fff;
+    box-shadow: 0 2px 8px rgba(47, 122, 82, 0.3);
+  }
+  .btn.primary:hover { background: var(--green-dark); box-shadow: 0 4px 12px rgba(47, 122, 82, 0.4); }
+  .btn.recording {
+    background: var(--risk-high); color: #fff;
+    animation: recording-pulse 1.4s infinite;
+  }
+  @keyframes recording-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(192, 57, 43, 0); }
+  }
+  .error-box {
+    background: #fdecea; border: none; padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-sm); color: var(--risk-high); font-size: 0.85rem;
+  }
+
+  details.vision-toggle {
+    margin-top: 0.7rem; font-size: 0.82rem; color: var(--ink-soft);
+    background: var(--card); border: none; border-radius: var(--radius-sm);
+    padding: 0.55rem 0.85rem; box-shadow: var(--shadow-sm);
+  }
+  details.vision-toggle summary { cursor: pointer; font-weight: 600; }
+  details.vision-toggle summary:hover { color: var(--green); }
+  video, canvas { width: 200px; border-radius: var(--radius-sm); margin-top: 0.5rem; box-shadow: var(--shadow-sm); }
+
+  /* 固定區塊(標題/狀態列/語言切換/常用需求/輸入列/鏡頭)一律不縮不長，
+     只把多出來的空間讓給.chat-log，這樣這些控制項永遠在畫面上點得到，
+     不會被往下捲的對話紀錄推出視窗外。 */
+  h1, .subtitle, .status-bar, .lang-toggle, .quick-grid, .hint-bubble,
+  .input-row, details.vision-toggle {
+    flex: 0 0 auto;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>多語言系統</h1>
+  <p class="subtitle">中文、英文語音互動，台語需求辨讀與回應。</p>
+
+  <div class="status-bar">
+    規則式判斷：
+    <span class="{{ 'on' if voice_io_available else 'off' }}">{{ '啟用' if voice_io_available else '停用' }}</span>
+    ｜語音輸入：
+    <span class="{{ 'on' if whisper_available else 'off' }}">{{ '啟用' if whisper_available else '停用' }}</span>
+    ｜視覺辨識：
+    <span class="{{ 'on' if vision_backend else 'off' }}">{{ vision_backend or '停用' }}</span>
+  </div>
+
+  <div class="lang-toggle">
+    <div class="segmented">
+      <button class="lang-btn active" data-lang="hokkien">台語</button>
+      <button class="lang-btn" data-lang="zh">中文</button>
+      <button class="lang-btn" data-lang="en">英文</button>
+    </div>
+    <div class="mode-cluster">
+      <button class="mode-btn active" data-panel="chat">開講</button>
+      <button class="mode-btn" data-panel="detail">查詢</button>
+      <button class="mode-btn" id="mute-btn" title="預設會自動朗讀回覆，按這個切換靜音">自動朗讀</button>
+      <button class="mode-btn" id="clear-history-btn" title="清除本機保存的對話紀錄"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> 清除紀錄</button>
+    </div>
+  </div>
+
+  <div class="quick-grid" id="quick-grid"></div>
+
+  <div class="hint-bubble" id="mode-hint"></div>
+
+  <div class="chat-log" id="chat-log"></div>
+
+  <div class="input-row">
+    <textarea id="text-input" rows="2" placeholder="輸入需求..."></textarea>
+    <div class="btn-row">
+      <button class="btn" id="mic-btn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> 開始語音辨識</button>
+      <button class="btn" id="clear-btn">清除</button>
+      <button class="btn primary" id="send-btn">送出</button>
+    </div>
+  </div>
+
+  <details class="vision-toggle">
+    <summary>鏡頭視覺辨識（選用）</summary>
+    <video id="webcam" autoplay muted playsinline></video>
+    <canvas id="capture-canvas" style="display:none;"></canvas>
+    <div style="margin-top:0.4rem;">
+      <button class="btn" id="camera-toggle-btn">開啟鏡頭</button>
+      <span id="gesture-status" style="font-size:0.78rem;color:var(--ink-soft);"></span>
+    </div>
+  </details>
+</div>
+
+<script>
+// 6個常用需求：中文/英文是直接寫的日常短句，台語版本是事先用專案實際在跑的
+// Taigi-Llama-2-Translator-7B(Ollama)翻譯過的結果，不是手工猜的羅馬字/漢字。
+// 不管畫面上顯示哪個語言的按鈕文字，實際送給後端判斷意圖的一律是中文canonical
+// 短句(因為yuava22的規則式意圖判斷/LLM大腦都是靠中文/英文關鍵字比對，目前
+// 系統本身沒有「聽懂台語」的能力，只有「用台語回話」——這點在下面的提示文字
+// 也誠實寫出來，不假裝可以做到台語語音辨識)。
+// 純線條SVG小圖示，不用emoji(不同系統/字型顯示不一致，樣式也不好統一
+// 控制粗細/顏色)——都是通用幾何圖形(水滴/門/警示三角/鈴鐺/風/循環箭頭)，
+// 不是特定廠牌圖示庫的著作內容。
+const ICONS = {
+  water: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"/></svg>',
+  toilet: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V5a2 2 0 0 1 2-2h5l3 3v15"/><circle cx="13" cy="12" r="0.6" fill="currentColor" stroke="none"/></svg>',
+  pain: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  call_staff: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+  breathing: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 4.6a2 2 0 1 1 1.4 3.4H2"/><path d="M12.6 19.4a2 2 0 1 0 1.4-3.4H2"/><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/></svg>',
+  turn_over: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+  stop: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  speaker: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>',
+  speakerMuted: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+  info: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+};
+
+const QUICK_ACTIONS = [
+  { key: "water", zh: "我要喝水", en: "I need water", hokkien: "我欲啉水" },
+  { key: "toilet", zh: "我要上廁所", en: "I need the toilet", hokkien: "我欲去放尿" },
+  { key: "pain", zh: "我很痛", en: "I'm in pain", hokkien: "我真艱苦" },
+  { key: "call_staff", zh: "請叫人來", en: "Please call staff", hokkien: "請人來共咱鬥跤手" },
+  { key: "breathing", zh: "我喘不過氣", en: "I can't breathe well", hokkien: "我喘袂過氣" },
+  { key: "turn_over", zh: "請幫我翻身", en: "Please help me turn over", hokkien: "請你共我扶一下" },
+];
+
+const LANG_LABEL = { hokkien: "台語", zh: "中文", en: "英文" };
+const MODE_HINT = {
+  hokkien: "點選常用需求，機器人會用台語回話。語音／文字辨識僅支援中文與英文。",
+  zh: "輸入需求，機器人會用台語回話。",
+  en: "Type in English — the robot replies in Hokkien.",
+};
+
+let currentLang = "hokkien";
+let currentPanel = "chat";
+const chatLog = document.getElementById("chat-log");
+const quickGrid = document.getElementById("quick-grid");
+const modeHint = document.getElementById("mode-hint");
+const textInput = document.getElementById("text-input");
+
+// ---- 對話紀錄：存在瀏覽器localStorage，重新整理頁面不會消失 ----
+// 只存在使用者這台瀏覽器本機，不會送到伺服器，也不會被其他裝置看到。
+const HISTORY_KEY = "taigi_multilang_chat_history";
+let HISTORY = [];
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    return []; // 格式壞掉或存取失敗(例如無痕視窗)就當作沒有歷史，不要整頁掛掉
+  }
+}
+
+function persistHistory() {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(HISTORY));
+  } catch (err) {
+    // 存不進去(例如容量爆掉)不影響當下的對話功能，只是這次不會被記住
+  }
+}
+
+document.getElementById("clear-history-btn").addEventListener("click", () => {
+  if (!confirm("確定要清除本機保存的對話紀錄嗎？")) return;
+  HISTORY = [];
+  persistHistory();
+  chatLog.innerHTML = "";
+});
+
+// ---- 自動朗讀：預設開啟，機器人一有回覆就直接把對應語言的語音唸出來，
+// 是給不能講話/打字比較慢的使用者設計的——不用再多點一次朗讀鈕才聽得到回覆，
+// 按這顆按鈕才會靜音。設定存在localStorage，重新整理頁面會記得上次的選擇。
+const MUTE_KEY = "taigi_multilang_muted";
+let isMuted = localStorage.getItem(MUTE_KEY) === "1";
+const muteBtn = document.getElementById("mute-btn");
+
+function refreshMuteBtn() {
+  muteBtn.innerHTML = (isMuted ? ICONS.speakerMuted : ICONS.speaker) + (isMuted ? " 靜音中" : " 自動朗讀");
+  muteBtn.classList.toggle("active", !isMuted);
+}
+
+muteBtn.addEventListener("click", () => {
+  isMuted = !isMuted;
+  try { localStorage.setItem(MUTE_KEY, isMuted ? "1" : "0"); } catch (err) {}
+  refreshMuteBtn();
+});
+refreshMuteBtn();
+
+// 台語模式下系統沒有真正聽懂台語的能力(見MODE_HINT誠實說明)，所以送給
+// 後端判斷意圖的文字固定用中文；中文/英文模式則直接送該語言本身的文字——
+// 後端的規則式意圖判斷跟LLM大腦都聽得懂英文，沒有理由英文模式底下還要
+// 偷偷送中文給後端。
+function sendTextFor(action, lang) {
+  return lang === "en" ? action.en : action.zh;
+}
+
+const PLACEHOLDER = {
+  hokkien: "輸入需求...",
+  zh: "輸入需求...",
+  en: "Type your request...",
+};
+
+function renderQuickGrid() {
+  quickGrid.innerHTML = "";
+  for (const action of QUICK_ACTIONS) {
+    const btn = document.createElement("button");
+    btn.className = "quick-card";
+    const title = action[currentLang === "hokkien" ? "hokkien" : currentLang];
+    const example = currentLang === "hokkien" ? action.zh : (currentLang === "zh" ? action.zh : action.en);
+    btn.innerHTML = `<span class="icon">${ICONS[action.key]}</span><div><div class="title">${title}</div><div class="example">${example}</div></div>`;
+    btn.addEventListener("click", () => sendMessage(sendTextFor(action, currentLang), LANG_LABEL[currentLang]));
+    quickGrid.appendChild(btn);
+  }
+}
+
+document.querySelectorAll(".lang-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".lang-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentLang = btn.dataset.lang;
+    modeHint.textContent = MODE_HINT[currentLang];
+    textInput.placeholder = PLACEHOLDER[currentLang];
+    renderQuickGrid();
+  });
+});
+
+// 只選有data-panel的mode-btn(開講/查詢)——mute-btn/clear-history-btn
+// 雖然也共用.mode-btn這個class(純粹借用同一套ghost button樣式)，但它們
+// 各自有自己獨立的click handler(見下面muteBtn/clear-history-btn段落)，
+// 不該被這裡的「切換開講/查詢面板」邏輯一起選到，不然點清除紀錄會
+// 意外把開講/查詢的active狀態弄亂、currentPanel被設成undefined。
+document.querySelectorAll(".mode-btn[data-panel]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".mode-btn[data-panel]").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentPanel = btn.dataset.panel;
+    document.querySelectorAll(".detail-panel").forEach((el) => {
+      el.style.display = currentPanel === "detail" ? "block" : "none";
+    });
+  });
+});
+
+function addUserBubble(text, langLabel, record = true) {
+  const row = document.createElement("div");
+  row.className = "msg-row user";
+  row.innerHTML = `<div class="bubble user">${escapeHtml(text)}<div class="meta">${langLabel}｜朗讀</div></div>`;
+  chatLog.appendChild(row);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  if (record) {
+    HISTORY.push({ type: "user", text, langLabel });
+    persistHistory();
+  }
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function riskClass(level) {
+  return level === "high" ? "risk-high" : (level === "medium" ? "risk-medium" : "risk-low");
+}
+
+// 把回覆文字裡「1. xxx 2. xxx」這種編號清單抓出來，做成步驟框——只在
+// 文字本身真的長這樣的時候才做這個排版，不是每個intent都假裝有固定樣板
+// (目前StructuredMedicalRenderer只覆蓋addressing_patient/request_staff/
+// medication_reminder三種high-risk意圖，其餘都是LLM自由回覆的文字)。
+function extractSteps(text) {
+  const re = /(\d+)\.\s*([^\d]+?)(?=(?:\d+\.\s)|$)/g;
+  const steps = [];
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const s = m[2].trim();
+    if (s) steps.push(s);
+  }
+  return steps.length >= 2 ? steps : null;
+}
+
+function addBotBubble(data, record = true) {
+  const row = document.createElement("div");
+  row.className = "msg-row bot";
+
+  if (record) {
+    HISTORY.push({ type: "bot", data });
+    persistHistory();
+  }
+
+  if (data.error) {
+    row.innerHTML = `<div class="bubble bot"><div class="error-box">${escapeHtml(data.error)}</div></div>`;
+    chatLog.appendChild(row);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return;
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble bot";
+
+  // 依目前語言模式顯示對應文字，不是每個模式都只顯示台語漢字——
+  // zh_text/en_text是後端「實際拿去生成對應語音的那份文字」(見
+  // multilingual_output.py)，跟朗讀出來的內容保證一致，不是另外現翻的。
+  const textByLang = { hokkien: data.hanji_text, zh: data.zh_text, en: data.en_text };
+  const noTextFallback = {
+    hokkien: "(無台語回覆)", zh: "(此回覆沒有中文文字，可切換到台語模式查看)",
+    en: "(No English text for this reply — switch to Hokkien mode to see it)",
+  };
+  const replyText = textByLang[currentLang] || noTextFallback[currentLang];
+  let stepsHtml = "";
+  const steps = extractSteps(replyText);
+  if (steps) {
+    stepsHtml = `<div class="steps-box"><div class="steps-title">協助步驟</div><ol>${steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol></div>`;
+  }
+
+  const audioUrlByLang = { hokkien: data.hokkien_audio_url, zh: data.zh_audio_url, en: data.en_audio_url };
+
+  bubble.innerHTML = `
+    <div>${escapeHtml(replyText)}</div>
+    ${stepsHtml}
+    <div class="actions">
+      <button class="icon-btn" title="朗讀（${LANG_LABEL[currentLang]}語音）">${ICONS.speaker}</button>
+      <button class="icon-btn" title="查看詳細判斷資訊">${ICONS.info}</button>
+    </div>
+    <audio class="inline-audio"></audio>
+    <div class="detail-panel" style="display:${currentPanel === "detail" ? "block" : "none"};">
+      <div class="field"><b>intent</b>：${data.intent || ""}</div>
+      <div class="field"><b>risk_level</b>：<span class="${riskClass(data.risk_level)}">${data.risk_level || ""}</span></div>
+      <div class="field"><b>大腦路徑</b>：${data.brain_path === "rule_based_fast_path" ? "規則式快速路徑" : "LLM大腦(qwen2.5)"}</div>
+      <div class="field"><b>status</b>：${data.status || ""}　<b>翻譯策略</b>：${data.translation_method || ""}</div>
+      <div class="field"><b>辨識文字</b>：${data.recognized_text || ""} ${data.detected_language ? "(" + data.detected_language + ")" : ""}</div>
+      <div class="field"><b>知識庫依據(RAG)</b>：${data.evidence_ids && data.evidence_ids.length ? data.evidence_ids.join("、") : "(這次沒有查到相關知識庫條目，回答純粹由LLM生成)"}</div>
+      ${data.errors && data.errors.length ? `<div class="field"><b>errors</b><pre>${escapeHtml(data.errors.join("\\n"))}</pre></div>` : ""}
+      <div class="field"><b>safety</b><pre>${escapeHtml(JSON.stringify(data.safety || {}, null, 2))}</pre></div>
+    </div>
+  `;
+
+  const audioEl = bubble.querySelector("audio.inline-audio");
+  function playForCurrentLang() {
+    const url = audioUrlByLang[currentLang];
+    if (!url) { return false; }
+    audioEl.src = url;
+    audioEl.play().catch(() => {}); // 瀏覽器可能因為使用者還沒跟頁面互動過而擋自動播放，安靜失敗即可
+    return true;
+  }
+  bubble.querySelector('[title^="朗讀"]').addEventListener("click", () => {
+    if (!playForCurrentLang()) alert(`目前沒有${LANG_LABEL[currentLang]}語音可播放`);
+  });
+
+  row.appendChild(bubble);
+  chatLog.appendChild(row);
+  chatLog.scrollTop = chatLog.scrollHeight;
+
+  // 預設自動朗讀新回覆(給不能講話/打字慢的使用者用，不用再手動點朗讀鈕)，
+  // 按上面的靜音按鈕可以關掉；從歷史紀錄還原時(record=false)不自動播放，
+  // 不然一開頁面舊訊息會全部搶著出聲。
+  if (record && !isMuted) playForCurrentLang();
+}
+
+async function sendMessage(text, langLabel) {
+  if (!text || !text.trim()) return;
+  addUserBubble(text, langLabel);
+  const thinkingRow = document.createElement("div");
+  thinkingRow.className = "msg-row bot";
+  thinkingRow.innerHTML = `<div class="bubble bot"><span class="typing-dots"><span></span><span></span><span></span></span></div>`;
+  chatLog.appendChild(thinkingRow);
+  chatLog.scrollTop = chatLog.scrollHeight;
+
+  const resp = await fetch("/api/interact", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }),
+  });
+  const data = await resp.json();
+  thinkingRow.remove();
+  addBotBubble(data);
+}
+
+document.getElementById("send-btn").addEventListener("click", () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+  sendMessage(text, LANG_LABEL[currentLang]);
+  textInput.value = "";
+});
+document.getElementById("clear-btn").addEventListener("click", () => { textInput.value = ""; });
+textInput.addEventListener("keydown", (e) => {
+  // 用注音/拼音等輸入法選字時，按Enter是「確認這個字」，不是「送出」——
+  // 這種情況瀏覽器會把keydown事件標成isComposing=true(IME組字階段中)，
+  // 一定要排除掉，不然選字按Enter會被這裡誤判成送出訊息。isComposing
+  // 在部分瀏覽器不可靠，額外用keyCode===229(IME事件的慣例值)當備援判斷。
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+    e.preventDefault();
+    document.getElementById("send-btn").click();
+  }
+});
+
+// ---- 語音辨識(錄音，只支援中文/英文，見MODE_HINT誠實說明) ----
+const micBtn = document.getElementById("mic-btn");
+let mediaRecorder = null;
+let audioChunks = [];
+
+micBtn.addEventListener("click", async () => {
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      micBtn.classList.remove("recording");
+      micBtn.innerHTML = ICONS.mic + " 開始語音辨識";
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+      addUserBubble("(語音輸入辨識中...)", LANG_LABEL[currentLang], false); // 佔位泡泡，先不寫進歷史紀錄
+      const resp = await fetch("/api/interact", { method: "POST", body: formData });
+      const data = await resp.json();
+      const finalText = data.recognized_text || "(無法辨識)";
+      chatLog.lastChild.querySelector(".bubble").innerHTML =
+        `${escapeHtml(finalText)}<div class="meta">${data.detected_language || ""}｜朗讀</div>`;
+      HISTORY.push({ type: "user", text: finalText, langLabel: data.detected_language || LANG_LABEL[currentLang] });
+      persistHistory();
+      addBotBubble(data);
+      stream.getTracks().forEach((t) => t.stop());
+    };
+    mediaRecorder.start();
+    micBtn.classList.add("recording");
+    micBtn.innerHTML = ICONS.stop + " 停止錄音";
+  } catch (err) {
+    alert("無法取得麥克風權限：" + err.message);
+  }
+});
+
+// ---- 鏡頭視覺辨識 ----
+const webcamVideo = document.getElementById("webcam");
+const captureCanvas = document.getElementById("capture-canvas");
+const cameraToggleBtn = document.getElementById("camera-toggle-btn");
+const gestureStatus = document.getElementById("gesture-status");
+let cameraStream = null;
+let gestureInterval = null;
+
+cameraToggleBtn.addEventListener("click", async () => {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((t) => t.stop());
+    cameraStream = null;
+    webcamVideo.srcObject = null;
+    clearInterval(gestureInterval);
+    cameraToggleBtn.textContent = "開啟鏡頭";
+    gestureStatus.textContent = "";
+    return;
+  }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    webcamVideo.srcObject = cameraStream;
+    cameraToggleBtn.textContent = "關閉鏡頭";
+    gestureInterval = setInterval(sendGestureFrame, 1500);
+  } catch (err) {
+    gestureStatus.textContent = "無法取得鏡頭權限：" + err.message;
+  }
+});
+
+async function sendGestureFrame() {
+  if (!cameraStream) return;
+  captureCanvas.width = webcamVideo.videoWidth;
+  captureCanvas.height = webcamVideo.videoHeight;
+  const ctx = captureCanvas.getContext("2d");
+  ctx.drawImage(webcamVideo, 0, 0);
+  captureCanvas.toBlob(async (blob) => {
+    const formData = new FormData();
+    formData.append("frame", blob, "frame.jpg");
+    const resp = await fetch("/api/vision_frame", { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.available === false) {
+      gestureStatus.textContent = "鏡頭視覺辨識未啟用：" + data.reason;
+      clearInterval(gestureInterval);
+      return;
+    }
+    if (data.event) {
+      gestureStatus.textContent = `偵測到事件：${data.event}`;
+      addUserBubble(`(手勢事件：${data.event})`, "視覺");
+      addBotBubble(data);
+    } else {
+      // 即時顯示每一幀的原始偵測描述(不用等到「穩定觸發」才有畫面)，
+      // 才能看出到底是「完全沒偵測到人」「有偵測到人但沒有明顯動作」
+      // 還是「動作有抓到、但還沒撐到4/8幀的穩定門檻」——這三種情況
+      // 排查起來完全不一樣。
+      gestureStatus.textContent = `監控中（${data.backend}）：${data.description_zh || "..."}`;
+    }
+  }, "image/jpeg", 0.8);
+}
+
+renderQuickGrid();
+modeHint.textContent = MODE_HINT[currentLang];
+textInput.placeholder = PLACEHOLDER[currentLang];
+
+// 還原本機保存的對話紀錄(record=false，不重新寫入、也不自動朗讀舊訊息)
+HISTORY = loadHistory();
+for (const entry of HISTORY) {
+  if (entry.type === "user") {
+    addUserBubble(entry.text, entry.langLabel, false);
+  } else if (entry.type === "bot") {
+    addBotBubble(entry.data, false);
+  }
+}
+</script>
+</body>
+</html>

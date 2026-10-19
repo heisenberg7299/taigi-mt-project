@@ -1,0 +1,19 @@
+# 核心 pipeline (mock 模式) 只需要標準庫, 以下為選用依賴
+
+pytest>=7.0          # 執行 tests/
+
+# real 翻譯後端 (HTTPTranslationBackend) 才需要
+requests>=2.28
+
+# neurlang TTS 後端 (NeurlangTTSBackend, 已驗證能實際出聲) 才需要
+# 注意: 跟 MERaLiON 要的 transformers>=5.3.0 互斥, 需要 <5
+# numpy 同時是 audio_metrics.py (讀取wav品質檢查) 的必要依賴
+# coqui-tts[codec]
+# "transformers<5"
+numpy>=1.24
+
+# real TTS 後端 (SpeechT5TailoBackend, 尚未驗證) 才需要
+# transformers>=4.30
+# torch>=2.0
+# soundfile>=0.12
+# sentencepiece

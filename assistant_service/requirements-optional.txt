@@ -1,0 +1,29 @@
+# assistant_service核心(brain_response.py/response_controller.py/
+# tts_router.py)只需要requests，以下是這次接LLM大腦+中英文語音+鏡頭手勢
+# 偵測整合(voice_io_bridge.py/brain_llm.py/asr_bridge.py/
+# multilingual_output.py/gesture_bridge.py/web/)才需要的選用依賴，缺少
+# 任一個都會讓對應功能優雅降級(見各模組docstring)，不會讓其他功能連帶壞掉。
+
+flask>=3.0            # web/app.py 整合驗證網站
+
+# brain_llm.py(OllamaBrain) 需要另外 ollama pull qwen2.5:7b-instruct
+# (或其他通用對話模型，見brain_llm.DEFAULT_MODEL)
+# requests已經是核心依賴, 不重複列
+
+openai-whisper         # asr_bridge.py 中英文語音辨識, 需要系統裝ffmpeg
+gtts                    # multilingual_output.py 中英文補充語音輸出, 需要系統裝mpg123(播放用，不是產生用)
+
+# vision_bridge.py (MediaPipe Pose，鏡頭視覺辨識的主要backend) 才需要，
+# 還需要另外下載pose landmarker模型檔放到assistant_service/models/：
+# curl -L -o assistant_service/models/pose_landmarker_lite.task \
+#   https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task
+mediapipe
+
+# gesture_bridge.py (YOLO-pose，鏡頭視覺辨識的備援backend，MediaPipe沒裝好
+# 時才會用到) 才需要，而且還需要另外
+# pip install -e path/to/Interactive-service-robots
+# (yuava22/Interactive-service-robots, 私有repo, 不vendor進這個專案，
+# 需要自己有存取權限才能裝)
+ultralytics
+opencv-python
+numpy

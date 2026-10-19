@@ -18,6 +18,15 @@
     .result .backend-used { color: #666; font-size: 0.9em; }
     .error { margin-top: 24px; color: #c00; }
     audio { width: 100%; margin-top: 8px; }
+    .pronunciation { margin-top: 16px; }
+    .pronunciation h2 { font-size: 1em; margin-bottom: 6px; }
+    .pronunciation table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+    .pronunciation th, .pronunciation td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #ddd; }
+    .source-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.85em; }
+    .source-gold_verified { background: #d9f0d9; color: #256b25; }
+    .source-dictionary_majority { background: #fdf1cf; color: #8a6d1a; }
+    .source-dictionary_unambiguous { background: #eee; color: #555; }
+    .not-applied { color: #c00; font-size: 0.85em; }
   </style>
 </head>
 <body>
@@ -46,6 +55,36 @@
     <div class="han">台語漢字：{{ result.han }}</div>
     <div class="backend-used">語音引擎：{{ backend_labels[result.backend] }}</div>
     <audio controls autoplay src="{{ result.audio_url }}"></audio>
+
+    {% if result.pronunciation_entries %}
+    <div class="pronunciation">
+      <h2>發音決策（ChhoeTaigi辭典＋母語者黃金標準，非固定表）</h2>
+      <table>
+        <thead>
+          <tr><th>字/詞</th><th>候選讀音</th><th>選擇</th><th>依據</th></tr>
+        </thead>
+        <tbody>
+          {% for e in result.pronunciation_entries %}
+          <tr>
+            <td>{{ e.surface }}</td>
+            <td>{{ e.candidates | join(" / ") }}</td>
+            <td>
+              {{ e.chosen_reading }}
+              {% if not e.applied %}<div class="not-applied">未套用：{{ e.reason }}</div>{% endif %}
+            </td>
+            <td>
+              <span class="source-tag source-{{ e.source }}">
+                {% if e.source == "gold_verified" %}母語者黃金標準
+                {% elif e.source == "dictionary_majority" %}辭典多數決
+                {% else %}辭典唯一讀音{% endif %}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 </body>
