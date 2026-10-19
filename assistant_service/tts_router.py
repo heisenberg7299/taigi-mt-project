@@ -15,6 +15,16 @@ TTS Router：決定要用neurlang即時生成還是MERaLiON快取/預生成。
 MERaLiON即時生成(RTF=3.63，比即時慢35倍，見reports/stage4_tts_candidates.md)
 只適合用在「预先生成、之後重複命中快取」的固定句，不適合每次都即時呼叫，
 所以這裡故意只有approved_sentences才會觸發MERaLiON合成，其餘一律neurlang。
+
+## 強制全部用MERaLiON的選項(2026-10-19新增)
+
+使用者實際確認過代價後(硬碟~2.7GB、RAM常駐~2.1GB、RTF比即時慢35倍)，
+明確要求把assistant_service(port 5020)的台語語音輸出全部改用MERaLiON，
+不要只靠approved_sentences這套智慧路由。用環境變數`ASSISTANT_SERVICE_
+FORCE_MERALION=1`開啟，**預設不開**——不想承擔這個效能代價的人完全不受
+影響，原本的智慧路由邏輯(規則1/2/3)一行都沒改，只是在前面多加一個
+使用者自己選擇性開啟的覆蓋開關。開啟後每句話都要等好幾秒到十幾秒才會
+出聲，這是已經讓使用者知情後的取捨，不是自動判斷「這樣比較好」。
 """
 
 from __future__ import annotations
@@ -95,6 +105,12 @@ def is_approved_common_sentence(text: str) -> bool:
     return text in load_approved_sentences()
 
 
+def _force_meralion_enabled() -> bool:
+    """見模組docstring「強制全部用MERaLiON的選項」。每次呼叫都重新讀環境
+    變數(不快取成模組層級常數)，讓測試/重新設定時不需要reload模組。"""
+    return os.environ.get("ASSISTANT_SERVICE_FORCE_MERALION") == "1"
+
+
 def _call_backend(text: str, backend: str) -> bytes:
     port = BACKEND_PORTS[backend]
     resp = requests.post(f"http://127.0.0.1:{port}/synthesize", json={"han": text}, timeout=120)
@@ -109,7 +125,7 @@ def route_and_synthesize(text: str) -> TTSRouteResult:
 
     out_path = CACHE_DIR / f"{_cache_key(text)}.wav"
 
-    if is_approved_common_sentence(text):
+    if is_approved_common_sentence(text) or _force_meralion_enabled():
         audio_bytes = _call_backend(text, "meralion")
         out_path.write_bytes(audio_bytes)
         return TTSRouteResult(backend="meralion_fresh_cached", audio_path=out_path, from_cache=False)

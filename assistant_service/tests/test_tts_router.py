@@ -80,6 +80,29 @@ def test_route_and_synthesize_uses_neurlang_for_unapproved_sentence(_isolated_ca
     assert result.from_cache is False
 
 
+def test_force_meralion_env_var_overrides_default_routing_for_any_sentence(_isolated_cache, monkeypatch):
+    """2026-10-19新增：使用者在了解硬碟/RAM/速度代價後，明確要求台語輸出
+    全部改用MERaLiON，不受approved_sentences清單限制。預設(環境變數沒設)
+    不受影響，見下一個測試。"""
+    monkeypatch.setenv("ASSISTANT_SERVICE_FORCE_MERALION", "1")
+
+    with patch.object(tts_router, "_call_backend", return_value=b"fake-wav-bytes") as mock_call:
+        result = tts_router.route_and_synthesize("完全沒在approved清單裡的隨便一句話")
+
+    mock_call.assert_called_once_with("完全沒在approved清單裡的隨便一句話", "meralion")
+    assert result.backend == "meralion_fresh_cached"
+
+
+def test_force_meralion_env_var_defaults_to_off(_isolated_cache, monkeypatch):
+    """沒設這個環境變數(或值不是"1")時，行為要跟這個選項加入之前完全
+    一樣——不想承擔MERaLiON效能代價的人不該被意外影響。"""
+    monkeypatch.delenv("ASSISTANT_SERVICE_FORCE_MERALION", raising=False)
+    with patch.object(tts_router, "_call_backend", return_value=b"fake-wav-bytes") as mock_call:
+        result = tts_router.route_and_synthesize("預設行為應該是neurlang")
+    mock_call.assert_called_once_with("預設行為應該是neurlang", "neurlang")
+    assert result.backend == "neurlang_realtime"
+
+
 def test_route_and_synthesize_hits_cache_on_second_call_without_calling_backend_again(_isolated_cache):
     """第二次問同一句話(不管approved與否)應該直接命中快取，不用重新呼叫
     任何TTS backend——見tts_router.py docstring路由規則第1條。"""
