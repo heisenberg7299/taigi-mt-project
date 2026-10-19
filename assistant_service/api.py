@@ -45,7 +45,12 @@ from tw_hokkien_tts_pipeline.translate import TaigiLlamaTranslationBackend  # no
 
 # 跟 scripts/eval_translation_safety.py 用同一份詞庫, 避免API跟評估腳本
 # 兩邊各自維護一份、彼此不同步
-from scripts.eval_translation_safety import DRUG_LEXICON, PERSON_NAMES  # noqa: E402
+from scripts.eval_translation_safety import (  # noqa: E402
+    DEVICE_LEXICON,
+    DRUG_LEXICON,
+    MEDICAL_TITLE_LEXICON,
+    PERSON_NAMES,
+)
 
 
 class BrainResponseIn(BaseModel):
@@ -62,7 +67,12 @@ class BrainResponseIn(BaseModel):
 
 app = FastAPI(title="Taigi Assistant Speech Service", version="0.1.0")
 
-_guard = ProtectedTokenGuard(drug_lexicon=DRUG_LEXICON, person_names=PERSON_NAMES)
+_guard = ProtectedTokenGuard(
+    drug_lexicon=DRUG_LEXICON,
+    person_names=PERSON_NAMES,
+    medical_title_lexicon=MEDICAL_TITLE_LEXICON,
+    device_lexicon=DEVICE_LEXICON,
+)
 _backend = TaigiLlamaTranslationBackend()
 _renderer = StructuredMedicalRenderer()
 _controller = ResponseController(

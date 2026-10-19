@@ -37,10 +37,18 @@ from tw_hokkien_tts_pipeline.structured_renderer import StructuredIntent, Struct
 
 from assistant_service.brain_response import BrainResponse  # noqa: E402
 
-# 固定回覆(fail-closed用)：**demo版本，尚未經台語母語者審核**，正式使用前
-# 這句話的實際台語用字/發音要先確認過，才能真的信任它在任何情況下都安全。
-# 目前用neurlang生成好放在 fallback_audio/，不用每次abstain都重新合成。
+# 固定回覆(fail-closed用)：**demo版本，尚未經母語者/native speaker審核**，
+# 正式使用前這幾句話的實際用字/發音要先確認過，才能真的信任它們在任何情況
+# 下都安全。台語版本用neurlang生成好放在 fallback_audio/，不用每次abstain
+# 都重新合成；中文/英文版本是固定翻譯好的句子(不是LLM即時翻譯)，跟台語版本
+# 意思一致——刻意用固定句子而不是brain_response原本的response_zh/
+# response_en，因為進到fail-safe這條路代表大腦原本要講的內容已經被判定
+# 不安全/跟slots不一致，如果中英文語音還是講出那份被擋下來的內容，等於
+# 讓Hokkien那邊的安全把關失去意義(病人自己聽不懂中文/英文就算了，但陪同的
+# 家屬/工作人員聽得懂，一樣不該聽到被擋下來的內容)。
 FALLBACK_SENTENCE_HAN = "這个問題我無法度確定，我共你通知護理師。"
+FALLBACK_SENTENCE_ZH = "這個問題我沒辦法確定，我會通知護理師。"
+FALLBACK_SENTENCE_EN = "I'm not sure about this question. I'll notify the nurse for you."
 FALLBACK_AUDIO_NAME = "notify_nurse.wav"
 FALLBACK_AUDIO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fallback_audio", FALLBACK_AUDIO_NAME)
 

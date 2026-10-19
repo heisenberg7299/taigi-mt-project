@@ -47,6 +47,7 @@ tw_hokkien_tts_pipeline/
   segment.py              SegmentationBackend 介面 (Mock 斷詞/轉台羅)
   romanize.py             台羅正規化 + 簡化版連讀變調 (預設關閉)
   tts.py                  TTSBackend 介面 (Mock WAV + Neurlang已驗證 + SpeechT5骨架)
+  phoneme_normalize.py     修正neurlang因Unicode正規化形式不匹配、靜默丟棄送氣/鼻化音素+全形標點的問題(2026-08-04)
   audio_metrics.py         讀取wav檔量測時長/非靜音比例/NaN/全零等品質指標
   pipeline.py              串接以上各層的主流程, 含Protected Token完整性/安全檢查/adaptive策略
   cli.py                    命令列介面
@@ -56,6 +57,7 @@ tw_hokkien_tts_pipeline/
     test_adaptive_translation.py           Adaptive Protected Token雙路策略測試, 假backend決定性 (4項)
     test_translate_taigi_llama_smoke.py    真實翻譯 smoke test (需要Ollama在跑, 否則自動skip)
     test_tts_neurlang_smoke.py             真實TTS smoke test (需要neurlang模型權重才會跑, 否則自動skip)
+    test_phoneme_normalize.py              phoneme_normalize.py測試(5項純字串單元測試+1項真實smoke test)
 ```
 
 跟這個repo其他部分的關係：`live_test/`(neurlang+MERaLiON)是已驗證能實際
@@ -290,6 +292,39 @@ neurlang版本/替代模型出現。
 - `drug_lexicon` 的值務必由台語專業人士確認過再放進去, 這個 repo 本身**不**
   內建任何未經審核的醫療發音資料, 範例詞庫僅供串接測試。
 
+## phoneme_normalize.py：修正音素被靜默丟棄問題 (2026-08-04)
+
+使用者實際測試整合網站(`assistant_service/web/`)後回報「聽起來怪怪的」，
+追查回`reports/tts_oov_audit.md`(2026-08-01)記錄過的發現：84%(168/200)
+候選句子的送氣(ʰ)/鼻化母音(ã/ĩ/ũ/ẽ/õ)符號被neurlang的tokenizer靜默丟棄。
+當時audit只確認「丟棄了」，沒有查為什麼、能不能修——這次查出根因：
+
+**不是模型詞彙表真的不支援這些音素，是Unicode正規化形式不匹配**：
+- 送氣`ʰ`(U+02B0)：模型詞彙表沒有這個符號，但有純字母`h`——剛好對應台語
+  羅馬字標準寫法本來就是用「子音+h」表示送氣(th/ph/kh/tsh)。
+- 鼻化母音(pygoruut輸出precomposed形式，例如`ã`)：模型詞彙表沒有
+  precomposed形式，但有組合用鼻化符號(combining tilde, U+0303)——NFD
+  正規化拆開後兩部分都查得到。
+- 全形中文標點(，。？！)：模型詞彙表只有半形ASCII標點，原本理論推測是
+  「一併轉成半形就能修正斷句」，**但實測讓使用者聽過後，回報「台語的
+  斷句更怪了」，已經撤掉這部分**——「詞彙表裡有這個符號」不代表「模型
+  訓練時真的學過這個符號該怎麼停頓」，這是沒有實測基礎的理論推測，使用者
+  的耳朵給的證據比推測更可信。**斷句問題本身還沒解決**，目前`normalize_
+  phonemes()`只處理送氣/鼻化音素，不處理標點，全形標點依然會被丟棄。
+
+`patch_neurlang_phonemizer()`把這個正規化包成一個wrapper，掛在
+`Synthesizer`的phonemizer輸出後、tokenizer encode之前，`NeurlangTTSBackend`
+跟`live_test/tts_backend.py`(實際serving用的TTS process)都已套用，避免
+兩邊各自維護一份會不同步。**實測(5句真實候選句子)**：修正前被丟棄的
+送氣/鼻化符號從每句2~6個降到0個；殘留已知無法用這個方法解決的問題：
+鼻音聲調符號(ń/ǹ，200句audit裡只出現3次，頻率很低)。
+
+**這個修正沒有改變模型、沒有重新訓練，不保證發音一定變準**——只保證
+音素/標點資訊有正確傳進模型，模型本身有沒有學好這些音素的正確發音是
+另一回事，需要台語母語者實際聽過確認整體效果，不能只看「有沒有被丟棄」
+就宣稱問題解決。新增6項測試(`test_phoneme_normalize.py`，5項純字串單元
+測試+1項真實smoke test驗證丟棄清單真的清空)。
+
 ## 已知限制
 
 - **斷詞層仍是mock**：詞庫只有十幾個示範詞, 真實句子大部分字詞會fallback
@@ -305,9 +340,14 @@ neurlang版本/替代模型出現。
 - `HTTPTranslationBackend` / `SpeechT5TailoBackend` 是可運作的骨架, 但沒有
   對應任何一個已驗證存在的正式 API/模型端點, 使用前一定要照上面的步驟自行
   串接與驗證。
-- `NeurlangTTSBackend` 已驗證能實際出聲，但沿用的是neurlang本身既有的限制
-  （見 `reports/tts_oov_audit.md`）：送氣/鼻化符號(ʰ/ã/ĩ等)會被內建
-  phonemizer丟棄，這是模型詞彙表本身的問題，不是這次串接造成的。
+- `NeurlangTTSBackend` 已驗證能實際出聲。**送氣/鼻化符號(ʰ/ã/ĩ等)被內建
+  phonemizer丟棄的問題(見`reports/tts_oov_audit.md`)已經在2026-08-04
+  找到根因並大部分修正**：不是模型詞彙表真的不支援這些音素，是pygoruut
+  輸出的Unicode正規化形式(precomposed)跟模型詞彙表期望的形式(decomposed
+  /純字母h)不匹配，見`phoneme_normalize.py`——`NeurlangTTSBackend`已經
+  自動套用這個修正。殘留限制：鼻音聲調符號(ń/ǹ，出現頻率很低)還是會被
+  丟棄，且**這個修正不保證發音變準**，只保證音素資訊有正確傳進模型，
+  模型本身念不念得準需要母語者實際聽過確認。
 - **`NeurlangTTSBackend` 的Protected Token只保護文字，不保護發音**：
   `protected_pronunciation_enforced` 固定是 `False`，藥名等關鍵詞的漢字
   雖然保證會出現在送進模型的文字裡，但實際念法是neurlang自己的phonemizer

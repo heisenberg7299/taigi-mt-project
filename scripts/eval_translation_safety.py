@@ -65,6 +65,24 @@ PERSON_NAMES = {
     "林淑芬", "黃伯伯", "吳文彬", "林志豪",
 }
 
+# 醫療職稱/器材詞庫(2026-08-17新增, 對應protected_tokens.py新增的TITLE/
+# DEVICE類別)。跟DRUG_LEXICON同樣的紀律: 這是起步用的小詞庫, 不是完整
+# 涵蓋, 值全部先設None(尚無人工校正過的台羅讀音)——沒有語料佐證或母語者
+# 確認前, 不亂猜發音塞進去(即使是常見詞, 文白讀選字錯了一樣會念錯)。
+# 這份eval用資料集本身不含這些詞(dev/locked/locked_v2的critical_entities
+# 目前只標DRUG/PERSON), 所以這裡不影響既有50句評估結果, 純粹是讓
+# assistant_service/*.py 的正式pipeline guard能開始偵測、遮罩這兩類實體。
+MEDICAL_TITLE_LEXICON: dict[str, str | None] = {
+    "呼吸治療師": None, "護理師": None, "護士": None, "醫師": None, "醫生": None,
+    "主治醫師": None, "住院醫師": None, "藥師": None, "社工師": None,
+    "物理治療師": None, "職能治療師": None, "營養師": None, "放射師": None,
+}
+DEVICE_LEXICON: dict[str, str | None] = {
+    "呼吸器": None, "血氧機": None, "點滴": None, "導尿管": None,
+    "氧氣筒": None, "氧氣瓶": None, "輪椅": None, "血壓計": None,
+    "體溫計": None, "血糖機": None, "心電圖機": None, "抽痰機": None,
+}
+
 
 def score_output(sentence: dict, hanji_text: str | None) -> dict:
     """用資料集自己標註的required_meanings/forbidden_meanings/critical_entities/
@@ -225,7 +243,12 @@ def main():
     with open(os.path.join(DATA_DIR, fname), encoding="utf-8") as f:
         sentences = [json.loads(line) for line in f if line.strip()]
 
-    guard = ProtectedTokenGuard(drug_lexicon=DRUG_LEXICON, person_names=PERSON_NAMES)
+    guard = ProtectedTokenGuard(
+        drug_lexicon=DRUG_LEXICON,
+        person_names=PERSON_NAMES,
+        medical_title_lexicon=MEDICAL_TITLE_LEXICON,
+        device_lexicon=DEVICE_LEXICON,
+    )
     backend = TaigiLlamaTranslationBackend()
     renderer = StructuredMedicalRenderer()
 

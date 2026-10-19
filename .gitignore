@@ -7,9 +7,14 @@ __pycache__/
 
 # 大型/可重新產生的檔案，不進版控
 models/
-data/raw/
+data/raw/*
 tests/audio/
 tests/tts_benchmark_audio/
+# ChhoeTaigi詞庫下載說明是操作指南，不是資料本身，例外要進版控；
+# 目錄底下的CSV(下載後91,339列)仍要忽略，只有README例外
+!data/raw/chhoetaigi_taihoa_dict/
+data/raw/chhoetaigi_taihoa_dict/*
+!data/raw/chhoetaigi_taihoa_dict/README.md
 
 # 測試者的即時回覆資料（個人意見、持續累積），不進版控
 data/human_review/
@@ -30,6 +35,9 @@ reports/errors.csv
 CURRENT_TUNNEL_URL.txt
 cloudflared.log
 tunnel_watchdog.log
+CURRENT_TUNNEL_URL_ASSISTANT_WEB.txt
+cloudflared_assistant_web.log
+tunnel_watchdog_assistant_web.log
 
 # live_test平台(scripts/start_live_test.sh)執行期產生的log
 live_test_neurlang.log
@@ -38,3 +46,7 @@ live_test_gateway.log
 
 # tw_hokkien_tts_pipeline CLI/測試執行期產生的輸出(wav+debug json)
 pipeline_output/
+
+# multilingual_output.py的gTTS中英文補充語音快取(執行期產生，mp3不是*.wav
+# 涵蓋得到，另外排除；不是安全驗證過的固定資源，不需要例外)
+assistant_service/cache/multilingual_audio/

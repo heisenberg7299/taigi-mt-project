@@ -21,6 +21,11 @@ class PipelineConfig:
     translation_backend: Literal["mock", "taigi_llama", "real"] = "mock"
     segmentation_backend: Literal["mock", "real"] = "mock"
     tts_backend: Literal["mock", "neurlang", "real"] = "mock"
+    # Stage 5: 上下文多音字消歧, 見contextual_disambiguator.py。"ollama"用
+    # 本機qwen2.5:7b-instruct做候選分類, 目前只在12筆gold benchmark上
+    # 初步評估過, 尚未接進segment.py的正式pipeline路徑
+    contextual_disambiguator_backend: Literal["mock", "ollama"] = "mock"
+    contextual_disambiguator_model_id: str = "qwen2.5:7b-instruct"
 
     # 真實翻譯 API 設定 (使用 real 後端時才需要)
     translation_api_base_url: str | None = None

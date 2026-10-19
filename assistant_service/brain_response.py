@@ -27,6 +27,12 @@ class BrainResponse:
     action: str = "speak"
     evidence_ids: list[str] = field(default_factory=list)
     priority: int = 50
+    # 選填：英文版本的回覆文字，給補充用的中英台三語語音輸出(見
+    # multilingual_output.py)用。**沒有經過跟response_zh->hanji_text同等的
+    # Protected Token/安全檢查**——這條路線的把關只發生在中文/台語那條主線，
+    # response_en純粹是LLM在同一次生成順便給的輔助內容，缺漏(None)時代表
+    # 沒有英文音檔可播，不是錯誤。
+    response_en: str | None = None
 
     @classmethod
     def from_dict(cls, d: dict) -> "BrainResponse":
@@ -45,6 +51,7 @@ class BrainResponse:
             action=d.get("action", "speak"),
             evidence_ids=d.get("evidence_ids") or [],
             priority=d.get("priority", 50),
+            response_en=d.get("response_en"),
         )
 
     def validate(self) -> list[str]:

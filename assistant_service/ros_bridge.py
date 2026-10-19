@@ -116,10 +116,15 @@ def main() -> None:
     from tw_hokkien_tts_pipeline.protected_tokens import ProtectedTokenGuard
     from tw_hokkien_tts_pipeline.structured_renderer import StructuredMedicalRenderer
     from tw_hokkien_tts_pipeline.translate import TaigiLlamaTranslationBackend
-    from scripts.eval_translation_safety import DRUG_LEXICON, PERSON_NAMES
+    from scripts.eval_translation_safety import DEVICE_LEXICON, DRUG_LEXICON, MEDICAL_TITLE_LEXICON, PERSON_NAMES
 
     rclpy.init()
-    guard = ProtectedTokenGuard(drug_lexicon=DRUG_LEXICON, person_names=PERSON_NAMES)
+    guard = ProtectedTokenGuard(
+        drug_lexicon=DRUG_LEXICON,
+        person_names=PERSON_NAMES,
+        medical_title_lexicon=MEDICAL_TITLE_LEXICON,
+        device_lexicon=DEVICE_LEXICON,
+    )
     backend = TaigiLlamaTranslationBackend()
     controller = ResponseController(
         guard=guard, translation_backend=backend,

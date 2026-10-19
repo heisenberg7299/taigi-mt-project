@@ -34,7 +34,8 @@ class _FakeEventDecision:
 
 def test_water_request_maps_to_low_risk_speak_action():
     decision = _FakeEventDecision(
-        event="WATER_REQUEST", reply_zh="我已通知護理人員協助送水，請稍等。", reply_en="...",
+        event="WATER_REQUEST", reply_zh="我已通知護理人員協助送水，請稍等。",
+        reply_en="I've notified the nurse to bring you water.",
     )
     br = event_decision_to_brain_response(decision, request_id="req_water")
 
@@ -42,6 +43,7 @@ def test_water_request_maps_to_low_risk_speak_action():
     assert br.intent == "water_request"
     assert br.risk_level == "low"
     assert br.response_zh == decision.reply_zh
+    assert br.response_en == decision.reply_en
     assert br.action == "speak"
     assert br.slots == {}
     assert br.priority == PRIORITY_GENERAL_SERVICE

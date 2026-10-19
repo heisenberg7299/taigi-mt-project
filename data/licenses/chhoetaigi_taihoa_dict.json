@@ -1,0 +1,16 @@
+{
+  "name": "chhoetaigi_taihoa_dict",
+  "license": "CC BY-SA 4.0 (姓名標示-相同方式分享 4.0 國際)",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
+  "category": "internal_ok_attribution_sharealike",
+  "source_url": "https://github.com/ChhoeTaigi/ChhoeTaigiDatabase/blob/master/ChhoeTaigiDatabase/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv",
+  "dataset_id": "ChhoeTaigi_TaihoaSoanntengTuichiautian",
+  "display_name": "2002+ 台華線頂對照典",
+  "provenance": "基礎資料由鄭良偉教授提供，楊允言教授與志工陸續擴充校對，ChhoeTaigi(找台語)計畫整理成CSV格式收錄於ChhoeTaigiDatabase",
+  "entry_count": 91339,
+  "verified_at": "2026-08-20",
+  "verification_method": "WebFetch對照GitHub README.md原始檔兩次獨立查證授權文字與詞條數量，並直接抓取CSV前5行實際資料核對欄位格式(見local_file_status)",
+  "notes": "CC BY-SA 4.0是「相同方式分享」授權: 若把從這份詞庫衍生的資料對外發布(不只是機器人內部使用)，衍生部分理論上需要用同樣授權釋出並標示來源，這是授權策略決定，本次只負責查證事實、不代替使用者做這個決定。",
+  "known_limitation_unverified": "CSV裡的KipUnicode/KipInput欄位目前不確定對應哪一套官方羅馬字方案(可能是教育部台羅、也可能是其他系統)，樣本資料顯示Kip欄位跟Poj(白話字)欄位偶有差異(例如\"à-lêng\"vs\"à-lîng\")，不是單純字母代換關係——這代表兩者不是同一套系統的別名。目前的整合(見poj_to_tailo.py/taihoa_dict_loader.py)選擇只用PojInput(白話字，欄位語意明確)做轉換，Kip欄位保留原樣、不當作台羅使用，避免把不確定的資料當成確定的",
+  "local_file_status": "尚未下載完整CSV(91,339列)進repo——這個沙盒環境的Bash工具沒有對外網路存取權限(curl/git皆確認連線失敗)，只透過WebFetch驗證了CSV表頭與前5列真實資料。完整檔案需要在有網路的環境下載後放到 data/raw/chhoetaigi_taihoa_dict/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv"
+}

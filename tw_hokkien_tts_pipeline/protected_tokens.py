@@ -19,6 +19,26 @@ Protected Token 遮罩 / 還原模組。
   1. 由醫療專業人員審核詞庫涵蓋率
   2. 針對院內常用藥名/劑型建立專屬詞庫
   3. 對於偵測不到的實體, 視設定決定是否直接擋下 (fail-closed) 而非放行
+
+## 類別涵蓋範圍 (2026-08-17新增ROOM/TIME/TITLE/DEVICE)
+
+新增的四個類別刻意都取單一英文單字當kind名稱 (ROOM, TIME, TITLE, DEVICE),
+不是ROOM_ID/MEDICAL_TITLE這種帶底線的複合詞——因為佔位符格式是
+"{kind}{字母尾碼}" 直接串接, kind名稱裡如果有底線, 佔位符就會變成
+"ROOM_IDA" 這種帶底線的字串, 違反上面已經實測驗證過的「純大寫英文單字,
+不用底線/數字/括號」格式結論, 可能重新引入同樣的LLM不穩定問題。
+
+沿用原本DRUG/PERSON/DOSE的設計分工: 這個模組只提供「偵測機制」(正則/
+詞庫比對), 實際詞庫資料 (例如醫療職稱/器材詞庫) 刻意不內建在這裡, 由
+呼叫端 (見 scripts/eval_translation_safety.py 的 DRUG_LEXICON/PERSON_NAMES)
+提供、審核、擴充——原因同DRUG_LEXICON: 未經母語者/醫療人員審核的詞庫
+不該混進正式程式碼裡當作預設值。
+
+刻意不把NEGATION做成protected token: 遮罩會把「不」「沒有」這類否定詞
+換成佔位符, 等於拿掉翻譯模型判斷句子語意所需的關鍵訊號, 這跟遮罩藥名/
+人名 (翻譯模型不需要「理解」藥名本身, 只需要原樣保留) 的情境完全不同。
+否定詞的正確處理方式是翻譯後檢查 (見 scripts/safety_checks.py 的
+negation check, 比對原文跟譯文的否定語意是否一致), 不是翻譯前遮罩。
 """
 
 from __future__ import annotations
@@ -27,7 +47,7 @@ import re
 from dataclasses import dataclass, field
 
 # 目前支援的類別, 順序即偵測順序 (見 mask())
-_KIND_NAMES = ("DRUG", "PERSON", "DOSE")
+_KIND_NAMES = ("DRUG", "TITLE", "DEVICE", "PERSON", "DOSE", "ROOM", "TIME")
 
 # 佔位符格式: KIND + 字母尾碼 (例如 DRUGA), 用來掃描/驗證文字裡的佔位符
 _PLACEHOLDER_RE = re.compile(r"(?:" + "|".join(_KIND_NAMES) + r")[A-Z]+")
@@ -36,6 +56,19 @@ _PLACEHOLDER_RE = re.compile(r"(?:" + "|".join(_KIND_NAMES) + r")[A-Z]+")
 _DOSE_RE = re.compile(
     r"\d+(?:\.\d+)?\s*(?:mg|ml|g|毫克|公克|克|毫升|c\.?c\.?|顆|錠|包|單位|IU)",
     re.IGNORECASE,
+)
+
+# 病房/床號/診間: 數字(可帶英文字母前綴, 例如"A3") + 病房/床/室/診間
+_ROOM_RE = re.compile(r"[A-Za-z]?\d{1,4}(?:號)?(?:病房|床|室|診間)")
+
+# 時刻: "早上八點半"/"下午三點整"/"九點三十分"這類中文時刻講法, 或"14:30"
+# 這種數字時刻。刻意不含日期 (年/月/日)——日期讀法牽涉到跟劑量/病房號不同
+# 的唸法規則, 留給 numeric_reading.py 未來擴充, 不在這裡的偵測範圍內。
+_TIME_RE = re.compile(
+    r"(?:(?:凌晨|清晨|早上|上午|中午|下午|傍晚|晚上|半夜)?"
+    r"(?:[0-9]{1,2}|[一二三四五六七八九十]{1,3})點(?:半|整)?"
+    r"(?:(?:[0-9]{1,2}|[一二三四五六七八九十]{1,3})分)?"
+    r"|\d{1,2}:\d{2})"
 )
 
 
@@ -81,7 +114,7 @@ def index_to_letter_suffix(index: int) -> str:
 class ProtectedSpan:
     """一段被遮罩的原文, 以及它對應的台羅讀音 (若有的話)。"""
 
-    kind: str  # DRUG / PERSON / DOSE
+    kind: str  # DRUG / TITLE / DEVICE / PERSON / DOSE / ROOM / TIME
     original: str
     placeholder: str
     tailo: str | None = None  # 由發音詞庫查到的台羅讀音, 供最終還原用
@@ -100,38 +133,53 @@ class ProtectedTokenGuard:
         self,
         drug_lexicon: dict[str, str | None] | None = None,
         person_names: set[str] | None = None,
+        medical_title_lexicon: dict[str, str | None] | None = None,
+        device_lexicon: dict[str, str | None] | None = None,
     ) -> None:
-        # drug_lexicon: {"盤尼西林": "puân-nî-se-lîm", ...}
-        # 值為 None 表示「已知是藥名, 但尚未有人工校正過的台羅讀音」,
+        # drug_lexicon / medical_title_lexicon / device_lexicon: {"盤尼西林": "puân-nî-se-lîm", ...}
+        # 值為 None 表示「已知是這個類別的詞, 但尚未有人工校正過的台羅讀音」,
         # 會被遮罩、但 coverage() 會視為未涵蓋, 觸發 fail-closed 檢查。
         # 實際讀音需由台語專業人士確認, 這裡只提供結構, 不內建未經審核的資料
         self.drug_lexicon = drug_lexicon or {}
         self.person_names = person_names or set()
+        self.medical_title_lexicon = medical_title_lexicon or {}
+        self.device_lexicon = device_lexicon or {}
 
     def mask(self, text: str) -> MaskResult:
         spans: list[ProtectedSpan] = []
-        counters = {"DRUG": 0, "PERSON": 0, "DOSE": 0}
+        counters = {kind: 0 for kind in _KIND_NAMES}
 
-        # 藥名: 依詞庫做最長字串優先比對, 避免子字串誤蓋
-        masked = self._mask_literal_terms(text, spans, counters)
+        # 藥名/醫療職稱/醫療器材: 依詞庫做最長字串優先比對, 避免子字串誤蓋。
+        # 職稱/器材放在人名之前, 避免像「陳護理師」這種詞裡的職稱先被人名
+        # 詞庫的姓氏比對搶走 (目前person_names是全名比對所以還不會衝突,
+        # 但保留這個順序讓未來若改成姓氏+職稱組合偵測時行為一致)
+        masked = self._mask_literal_terms(text, self.drug_lexicon, "DRUG", spans, counters)
+        masked = self._mask_literal_terms(masked, self.medical_title_lexicon, "TITLE", spans, counters)
+        masked = self._mask_literal_terms(masked, self.device_lexicon, "DEVICE", spans, counters)
 
         # 人名
         for name in sorted(self.person_names, key=len, reverse=True):
             masked = self._mask_one(masked, name, "PERSON", spans, counters)
 
-        # 劑量 (正則)
+        # 劑量/病房床號/時刻 (正則, 無詞庫——讀法由 numeric_reading.py 之後
+        # 視需要另外產生, 這裡先只負責偵測跟遮罩)
         masked = self._mask_regex(masked, _DOSE_RE, "DOSE", spans, counters)
+        masked = self._mask_regex(masked, _ROOM_RE, "ROOM", spans, counters)
+        masked = self._mask_regex(masked, _TIME_RE, "TIME", spans, counters)
 
         return MaskResult(masked_text=masked, spans=spans)
 
     def _mask_literal_terms(
-        self, text: str, spans: list[ProtectedSpan], counters: dict[str, int]
+        self,
+        text: str,
+        lexicon: dict[str, str | None],
+        kind: str,
+        spans: list[ProtectedSpan],
+        counters: dict[str, int],
     ) -> str:
         masked = text
-        for drug in sorted(self.drug_lexicon, key=len, reverse=True):
-            masked = self._mask_one(
-                masked, drug, "DRUG", spans, counters, tailo=self.drug_lexicon.get(drug)
-            )
+        for term in sorted(lexicon, key=len, reverse=True):
+            masked = self._mask_one(masked, term, kind, spans, counters, tailo=lexicon.get(term))
         return masked
 
     @staticmethod
@@ -182,10 +230,16 @@ class ProtectedTokenGuard:
         lookup = {span.placeholder: (span.tailo if span.tailo else span.original) for span in spans}
         return _build_combined_replace(text, lookup)
 
+    # 這三類是「詞庫比對」類別, 讀音來自人工校正過的詞庫, 才需要納入涵蓋率
+    # 檢查; PERSON目前沒有台羅詞庫機制、DOSE/ROOM/TIME是正則偵測+數字
+    # 讀法 (見numeric_reading.py) 而非詞庫比對, 所以不算進這裡
+    _LEXICON_BASED_KINDS = ("DRUG", "TITLE", "DEVICE")
+
     def coverage(self, spans: list[ProtectedSpan]) -> float:
-        """回傳有台羅讀音對應 (DRUG 類) 的涵蓋率, 供醫療安全門檻檢查。"""
-        drug_spans = [s for s in spans if s.kind == "DRUG"]
-        if not drug_spans:
+        """回傳詞庫比對類別 (DRUG/TITLE/DEVICE) 有台羅讀音對應的涵蓋率,
+        供醫療安全門檻檢查。"""
+        lexicon_spans = [s for s in spans if s.kind in self._LEXICON_BASED_KINDS]
+        if not lexicon_spans:
             return 1.0
-        covered = sum(1 for s in drug_spans if s.tailo)
-        return covered / len(drug_spans)
+        covered = sum(1 for s in lexicon_spans if s.tailo)
+        return covered / len(lexicon_spans)

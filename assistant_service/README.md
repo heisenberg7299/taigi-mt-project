@@ -120,16 +120,193 @@ delay-import的設計，讓`voice_io_bridge.py`本身不會因為對方套件沒
 `gesture_detector.py`(YOLO鏡頭手勢偵測)跟`tts.py`(gTTS)完全沒有用到，
 只借用ASR+意圖判斷這兩塊。
 
-還沒做：真的裝這個套件跑`run_from_wav()`(目前只驗證過手動建構
-`EventDecision`的轉換邏輯+後續管線，沒有真的餵Whisper辨識過的語音檔進去)、
-`camera`子命令(手勢/物件偵測)完全沒有整合進來、意圖種類仍然只有對方
-repo原本的3種(喝水/上廁所/求助)。
+**更新(2026-08-04，見下方「LLM大腦+中英雙語+鏡頭手勢整合」章節)**：
+`run_from_wav()`本身沒有直接被使用(`web/app.py`用自己的`asr_bridge.py`，
+支援中英雙語自動偵測，不是對方寫死中文的`asr.py`)，但整條「真的語音檔
+->Whisper->規則式意圖判斷->BrainResponse->Response Controller->真實台語
+WAV」的路已經端到端實測過(用gTTS合成語音當輸入模擬麥克風錄音)；`camera`
+子命令對應的手勢偵測功能也已經整合進來(`gesture_bridge.py`)，用真實YOLO
+模型在測試圖片上驗證過。意圖種類確實仍然只有對方repo原本的3種，這點沒變。
+
+## LLM大腦+中英雙語輸入+三語輸出+鏡頭手勢整合(2026-08-04)
+
+使用者要求把yuava22/Interactive-service-robots(語音I/O+規則式意圖判斷+
+鏡頭手勢偵測)跟這個專案已經做好的台語安全翻譯/Response Controller結合，
+並且要接真正的LLM大腦、支援中英文語音輸入輸出、加上鏡頭手勢偵測，最後
+用一個網頁把整條路串起來驗證。這一輪全部完成，而且是**真實跑過**(真的
+Ollama呼叫、真的Whisper辨識、真的YOLO偵測、真的產生可播放音檔)，不是
+只有mock測試。
+
+### 新增模組
+
+- **`brain_llm.py`(`OllamaBrain`)**：真正的LLM大腦，呼叫Ollama的通用對話
+  模型(`qwen2.5:7b-instruct`，另外`ollama pull`的，跟翻譯用的
+  Taigi-Llama-2-Translator是不同模型、職責分開)。system prompt要求LLM
+  輸出`intent`/`risk_level`/`response_zh`/`response_en`/`slots`的JSON，
+  用Ollama的`format=json`強制合法JSON，仍然防禦性處理解析失敗(回傳空dict
+  讓下游`validate()`自然擋下來，不會crash)。**大腦自己標的risk_level/
+  slots不能被信任**，`response_controller.py`的
+  `enforce_deterministic_risk_level()`才是最終防線；這裡只是讓prompt
+  盡量配合規則式檢查(藥物相關一律要求標high、填slots)。真實測試：一般
+  聊天正確生成合理回覆；「我可以多吃一顆普拿疼止痛藥嗎」被正確標記
+  risk_level=high、slots.drug=普拿疼——而且因為LLM的安全回覆(「這個問題
+  我會轉達給護理人員」)沒有把藥名寫進`response_zh`本文，跟`slots.drug`
+  對不上，被pre-translation交叉比對正確攔下來abstain，走固定回覆+通知
+  護理師——這正是這層層防護設計要達到的效果：就算LLM遵照指示給出「安全」
+  的迴避回答，只要跟自己給的結構化資料兜不起來，照樣不會被放行。
+- **`BrainResponse`新增`response_en`欄位**(選填)：LLM在同一次生成順便
+  給的英文翻譯，**沒有跟`response_zh`->`hanji_text`同等的Protected
+  Token/安全檢查**，純粹輔助用。
+- **`asr_bridge.py`**：中英雙語語音輸入，用openai-whisper的Python API
+  (不是像對方原本shell出去呼叫CLI)，自動偵測語言而不是寫死中文。真實
+  測試：gTTS合成的中文/英文語音都能被正確辨識出文字+正確偵測語言代碼
+  (`zh`/`en`)。
+- **`multilingual_output.py`**：中文/英文補充語音(gTTS)，明確跟主線的
+  台語安全通道分開——中文音檔念的是已經過pre-translation交叉比對的
+  `response_zh`原文(安全)，英文音檔念的是`response_en`(**沒有**同等安全
+  檢查，純參考)。只有`status=completed`且`action=speak`才會產生，
+  fail-safe的固定回覆不重複做三語版本。
+- **`gesture_bridge.py`**：鏡頭手勢/物件偵測(借用對方的
+  `BedsideGestureDetector`，YOLO姿態+物件模型)，拿掉對方`run_camera()`
+  裡`cv2.imshow()`的阻塞式GUI迴圈，改成適合網頁後端逐張frame呼叫的
+  `GestureDetectorSession`。事件->BrainResponse的轉換重用
+  `voice_io_bridge.event_decision_to_brain_response()`，不重複定義
+  intent/priority對應表。真實測試：用ultralytics官方範例圖(`zidane.jpg`)
+  跑過`GestureDetectorSession.process_frame()`，YOLO模型(`yolov8n.pt`+
+  `yolov8n-pose.pt`)真的載入、真的推論、回傳正確形狀的標註畫面，沒有
+  crash(該測試圖不是病床手勢動作，正確回傳`stable_event=None`，沒有誤判)。
+- **`web/app.py`**：整合驗證網站(Flask, port 5020)。文字輸入/瀏覽器錄音
+  /鏡頭手勢三種輸入方式，都走同一條`_finish_pipeline()`：Response
+  Controller安全把關->三語輸出。規則式快速路徑(yuava22 intent_rules)優先，
+  沒匹配到才用LLM大腦。任何選用依賴(whisper/voice_io_event_detector/
+  ultralytics)沒裝都優雅降級、明確告知前端哪個功能停用，不會整個500。
+  **真實HTTP測試**(不是test client，是真的啟動server用curl/requests打)：
+  規則式路徑(「我想要喝水」)、LLM路徑(一般聊天、醫療問題)、真實語音上傳
+  (gTTS合成「我想要上廁所」當模擬錄音，Whisper正確辨識、正確判斷語言、
+  正確路由)、鏡頭手勢frame上傳、三語音檔(Hokkien wav/中文mp3/英文mp3)
+  下載都驗證過是真的可播放檔案。也修過一個real bug：fail-safe的固定
+  回覆音檔在`fallback_audio/`、跟一般案例的`cache/audio/`是不同目錄，
+  原本的音檔路由沒有處理這個情況會404，已修好並加上會真的下載檔案驗證
+  的回歸測試。
+
+### 環境設置注意事項(這次是怎麼裝起來的，供之後重建環境參考)
+
+- `ollama pull qwen2.5:7b-instruct`(4.7GB)
+- `pip install openai-whisper gtts ultralytics opencv-python`(見
+  `requirements-optional.txt`)
+- **`voice_io_event_detector`套件沒有標準packaging(對方repo沒有
+  setup.py/pyproject.toml)**，不能用`pip install -e`，這次是用一個
+  `.pth`檔案把對方`src/`目錄加進venv的`sys.path`解決的。這次clone的
+  路徑是job暫存目錄(session結束會被清掉)，**不是long-term可靠的設置**，
+  之後要重建環境的人需要自己clone一份到穩定路徑、重新指定`.pth`(或改成
+  對方repo補上packaging後直接`pip install -e`)。
+- YOLO權重(`yolov8n.pt`/`yolov8n-pose.pt`)用`ultralytics`自動下載，
+  手動放到對方repo的`models/`目錄下(對方的`model_config.py`會自動找到，
+  不需要額外設定`YOLO_DETECT_MODEL`/`YOLO_POSE_MODEL`環境變數)。
+
+### 還沒做的部分
+
+- 對方repo的`voice_io_event_detector`套件目前不是穩定的pip相依(見上面
+  packaging問題)，正式部署前需要對方補上`setup.py`/`pyproject.toml`，
+  或把需要的邏輯用正式的方式vendor/打包。
+- 鏡頭手勢偵測只驗證過靜態測試圖片能跑起來、不crash，**沒有用真實攝影機
+  對著真人做「舉手求助/摸嘴巴要喝水/摸骨盆要上廁所」這些動作實測過**，
+  準確度完全未知，正式使用前一定要用真人在真實病床環境驗證。
+- 語音輸入的即時串流延遲、多輪對話(LLM大腦目前是單輪、沒有對話歷史)、
+  RAG(`evidence_ids`檢索)都還沒做，見`brain_llm.py`docstring。
+- `response_en`(英文補充語音)沒有Protected Token等級的安全檢查，`README`
+  跟程式碼註解都明確標註這點，不能誤以為三語輸出都同等可信。
+
+## fail-safe時三語都要有聲音(2026-08-04)
+
+原本`multilingual_output.py`只在`status=="completed"`時產生中英文補充
+語音，fail-safe(`status`為`abstained`/`rejected`)時中英文都是空的，只有
+台語會播放固定回覆——使用者測試後要求三語都要有。修正：`response_controller.py`
+新增`FALLBACK_SENTENCE_ZH`/`FALLBACK_SENTENCE_EN`兩句固定翻譯好的句子
+(跟`FALLBACK_SENTENCE_HAN`意思一致)，`synthesize_multilingual()`偵測到
+`controller_result.hanji_text == FALLBACK_SENTENCE_HAN`時，中英文改用這
+兩句固定句子合成語音，**不是**`brain_response`原本的`response_zh`/
+`response_en`——這是刻意的：進到fail-safe代表大腦原本要講的內容已經被
+判定不安全/跟slots不一致(例如藥名沒出現在回覆本文裡)，如果中英文語音
+講出那份被擋下來的內容，等於讓台語那邊的安全把關失去意義(病人聽不懂
+中/英文沒關係，但陪同的家屬/工作人員聽得懂，一樣不該聽到被擋下來的
+內容)。三句固定句**都還沒經過母語者審核**，跟原本`FALLBACK_SENTENCE_HAN`
+一樣的限制。已用真實HTTP請求驗證：「我可以多吃一顆普拿疼嗎」被安全機制
+abstain後，三語音檔全部產生且都是真實可下載播放的檔案。新增2項測試
+(驗證fixed句子被使用、且brain_response原本被擋下的文字絕對不會被拿去
+合成)，全部**85 passed, 2 skipped**。
+
+## 語音+視覺統一分類：multimodal_brain.py + MediaPipe Pose(2026-08-04)
+
+使用者要求把語音跟視覺(影音)訊號放進同一個模組，視覺辨識要包含MediaPipe
+Pose，而且分類判斷要依靠LLM，最後整合成一個介面。這一輪把原本各自獨立的
+`voice_io_bridge.py`(語音查表)+`gesture_bridge.py`(視覺查表直接決定回覆)
+兩條互相看不到對方的路徑，改成統一經過新的`multimodal_brain.py`分類。
+
+### `multimodal_brain.py`：統一分類入口
+
+`classify(voice_text=None, vision_description=None, ...) -> (BrainResponse, 分類路徑)`。
+規則：**純語音**輸入且對得到yuava22規則式關鍵字(喝水/上廁所/求助)時，走
+原本驗證過的快速路徑，不需要LLM推論延遲；除此之外的情況(任何視覺訊號、
+語音沒對到規則式關鍵字、或語音+視覺同時出現)一律組合所有可得訊號一起
+交給LLM大腦判斷——視覺訊號本身(「手靠近嘴巴」這種姿態描述)沒有語意，
+用固定查表決定最終回覆文字並不合理，需要LLM的判斷力去解讀，這是這次
+要求「視覺辨識也要依靠LLM分類」的核心改動。語音+視覺同時出現時，就算
+語音對到規則式關鍵字，也不會走快速路徑，因為視覺訊號可能提供衝突或補充
+資訊(例如語音說「不用了」但鏡頭觀察到疑似求助動作)，必須讓LLM綜合兩者
+判斷，查表法完全無法處理這種情境——`brain_llm.py`的system prompt也更新
+成能接收「語音+視覺觀察」兩行輸入，並明確規定衝突時以語音內容為準(語音
+是明確語意表達，鏡頭觀察只是姿態推測)。
+
+### `vision_bridge.py`：MediaPipe Pose(視覺辨識的新backend)
+
+新增`MediaPipePoseDetector`，跟既有`gesture_bridge.py`的YOLO-pose backend
+並存(不是取代)，兩者都產生統一的`VisionSignal(event, description_zh)`
+格式。網頁後端(`web/app.py`的`_vision_backend()`)MediaPipe優先，沒裝好
+(套件或模型檔缺任一個)才退回YOLO-pose。
+
+**用MediaPipe新版Tasks API(`PoseLandmarker`)，不是舊版`mp.solutions.pose`**
+——這次裝的`mediapipe==1.0.0`已經完全移除`mp.solutions`(比對方examples
+裡`mediapipe_pose_gesture.py`參考的舊版API新，那份程式碼直接搬過來會
+import錯誤)，改用Tasks API，需要另外下載pose landmarker模型檔(`.task`，
+`requirements-optional.txt`裡有下載指令)，放在`assistant_service/models/`
+(已被`.gitignore`的`models/`規則涵蓋，不進版控，跟YOLO權重處理方式一致)。
+
+判斷邏輯跟YOLO版本不完全一樣(BlazePose 33個landmark、座標系統也不同，轉成
+pixel座標後沿用類似的距離閾值)：YOLO版本的「求助」要看最近幾幀手腕有沒有
+**橫向擺動**(揮手)，這裡簡化成「手腕目前y座標高於肩膀」(單純舉手姿勢，
+不要求擺動)——這是刻意簡化，不是想做出一致的判斷準則，因為兩個backend
+產生的訊號最終都會送進LLM由LLM判斷，這裡的規則只是產生「觀察到什麼」的
+粗略描述，不是最終決策，不需要跟YOLO版本追求同樣的精確度。
+
+**已用真實環境端到端驗證**：MediaPipe模型真的載入、真的在測試圖片上跑
+(3項測試，非mock)；`vision_description`真的送進真實Ollama、真實
+Response Controller、真實neurlang TTS，產生真實可播放wav檔(見下方「還沒
+做」，這裡驗證的是「訊號能不能正確流過整條管線」，不是「偵測準不準」)。
+
+### `web/app.py`：真的統一成一個介面
+
+文字/語音/視覺三種輸入現在全部經過同一個`_run_pipeline()`->
+`multimodal_brain.classify()`，不再是「文字/語音一套邏輯、鏡頭又是另一套」
+——`/api/gesture_frame`改名`/api/vision_frame`，回傳格式一致，前端頁面
+本來就是同一個頁面(文字輸入框+錄音按鈕+鏡頭偵測都在同一個HTML)，這次
+補上了後端邏輯真正統一，不是只有UI擺在一起。
+
+### 還沒做
+
+- **MediaPipe backend完全沒有用真人在鏡頭前做實際手勢動作驗證過**，跟
+  YOLO backend的既有限制一樣，只驗證過靜態測試圖片能跑起來、不crash。
+- 判斷準則(「舉手」/「靠近嘴巴」/「靠近骨盆」的距離閾值)是沿用YOLO版本
+  抄過來的概略數值，沒有針對MediaPipe的座標系統/攝影機視角重新校準過。
+- 語音+視覺同時輸入的組合prompt只做過陽性案例的手動測試(見上方)，沒有
+  系統性測過大量「語音視覺矛盾」的情境LLM判斷得準不準。
 
 ## 檔案結構
 
 ```
 assistant_service/
   brain_response.py       BrainResponse dataclass + JSON schema驗證
+                           (含選填的response_en欄位)
   response_controller.py   核心路由邏輯：驗證JSON、比對response_zh與slots、
                             風險路由(high只用候選C/medium+low用adaptive A/B/C)、
                             失敗時的固定回覆
@@ -139,12 +316,29 @@ assistant_service/
   api.py                    FastAPI包裝，POST /v1/speech
   voice_io_bridge.py         把yuava22/Interactive-service-robots的規則式意圖判斷
                             (EventDecision)轉成BrainResponse
+  brain_llm.py               真正的LLM大腦(Ollama通用對話模型)
+  asr_bridge.py               中英雙語語音輸入(Whisper自動偵測語言)
+  multilingual_output.py     中文/英文補充語音輸出(gTTS)
+  gesture_bridge.py           鏡頭YOLO-pose偵測->BrainResponse(視覺辨識備援backend)
+  vision_bridge.py             鏡頭MediaPipe Pose偵測(視覺辨識主要backend)
+  multimodal_brain.py         語音+視覺訊號統一分類入口(依靠LLM判斷，不用查表)
+  web/                        整合驗證網站(Flask, port 5020)
+  models/                    MediaPipe pose landmarker模型檔(執行期下載，不進版控)
   fallback_audio/           安全檢查失敗時的固定回覆音檔(neurlang生成的demo版本)
-  cache/                    TTS Router的音檔快取(執行期產生，不進版控)
+  cache/                    TTS Router+multilingual_output的音檔快取(執行期產生，不進版控)
+  requirements-optional.txt  選用依賴清單(這次整合新增的部分)
   tests/
     test_response_controller.py    12項測試(假backend, 決定性)
     test_speech_request_queue.py   6項測試(佇列/優先權/狀態機)
     test_voice_io_bridge.py        5項測試(EventDecision->BrainResponse轉換+端到端)
+    test_brain_llm.py               7項mock測試
+    test_brain_llm_smoke.py         2項真實Ollama測試
+    test_asr_bridge_smoke.py        2項真實Whisper測試
+    test_multilingual_output.py     5項測試(4 mock+1真實gTTS)
+    test_gesture_bridge.py          2項測試(需要對方套件才會跑)
+    test_vision_bridge.py           3項真實MediaPipe測試
+    test_multimodal_brain.py        6項測試(假brain, 決定性)
+    test_web_app.py                 9項路由邏輯測試(mock)
 ```
 
 ## Response Controller 的路由規則

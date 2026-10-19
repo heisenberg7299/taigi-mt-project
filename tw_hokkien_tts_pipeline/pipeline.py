@@ -99,9 +99,16 @@ class Pipeline:
         config: PipelineConfig | None = None,
         drug_lexicon: dict[str, str] | None = None,
         person_names: set[str] | None = None,
+        medical_title_lexicon: dict[str, str] | None = None,
+        device_lexicon: dict[str, str] | None = None,
     ) -> None:
         self.config = config or PipelineConfig()
-        self.guard = ProtectedTokenGuard(drug_lexicon=drug_lexicon, person_names=person_names)
+        self.guard = ProtectedTokenGuard(
+            drug_lexicon=drug_lexicon,
+            person_names=person_names,
+            medical_title_lexicon=medical_title_lexicon,
+            device_lexicon=device_lexicon,
+        )
         self.translation_backend = build_translation_backend(self.config)
         self.segmentation_backend = build_segmentation_backend(self.config)
         self.tts_backend = build_tts_backend(self.config)

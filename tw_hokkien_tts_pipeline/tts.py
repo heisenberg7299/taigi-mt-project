@@ -120,9 +120,19 @@ class NeurlangTTSBackend(TTSBackend):
     模型路徑常數也沿用同一個慣例，不重新猜測模型用法。
 
     **輸入格式是台語漢字, 不是台羅**：這個模型訓練/推論時吃的是漢字,
-    內建 phonemizer 自己轉成 IPA 音素合成——這點在 `reports/tts_oov_audit.md`
-    反覆驗證過(pygoruut轉不出來的送氣/鼻化符號會被丟棄, 但輸入格式本身是
-    漢字)。所以這個backend固定使用 `tts_input.hanji_text`, 忽略 tailo_text。
+    內建 phonemizer 自己轉成 IPA 音素合成。所以這個backend固定使用
+    `tts_input.hanji_text`, 忽略 tailo_text。
+
+    **音素被靜默丟棄問題(2026-08-01發現)已經在2026-08-04修正大部分**：
+    `reports/tts_oov_audit.md`原本發現84%候選句子的送氣(ʰ)/鼻化母音
+    (ã/ĩ/ũ/ẽ/õ)/全形標點會被`TTSTokenizer`靜默丟棄，深入調查後發現是
+    Unicode正規化形式不匹配(不是模型真的不支援這些音素)，見
+    `phoneme_normalize.py`的完整說明——`_ensure_loaded()`載入模型後會
+    自動套用`patch_neurlang_phonemizer()`，之後每次`synth.tts()`都會
+    先做NFD正規化+ʰ→h+全形標點轉半形，讓這些音素/標點能正確映射到模型
+    詞彙表裡已有的符號。**這不保證發音變準**，只保證音素/標點資訊有傳進
+    模型，模型本身念不念得準要母語者實際聽過才能確認；殘留已知無法用
+    這個方法解決的問題：鼻音聲調符號(ń/ǹ，出現頻率很低)。
 
     **實測過漢羅混合輸入, 結論是不安全, 沒有採用**（詳見
     `tw_hokkien_tts_pipeline/README.md`「漢羅混合輸入實驗」章節）：
@@ -185,6 +195,9 @@ class NeurlangTTSBackend(TTSBackend):
         self._synth = Synthesizer(
             tts_checkpoint=str(checkpoint), tts_config_path=str(config_path)
         )
+        from .phoneme_normalize import patch_neurlang_phonemizer
+
+        patch_neurlang_phonemizer(self._synth)
 
     def synthesize(self, tts_input: TTSInput, out_path: Path) -> TTSResult:
         self._ensure_loaded()

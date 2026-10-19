@@ -53,10 +53,38 @@ def cached_audio_path(text: str) -> Path | None:
 
 
 def load_approved_sentences() -> set[str]:
-    """已審核過、值得用MERaLiON預生成+快取的常用句清單。這份清單目前是
-    空的demo檔案，實際要放哪些句子需要由台語專業人士審核過的固定回覆
-    決定(例如固定的安全警語、常見問候語)，不是隨便什麼句子都適合預先
-    花35倍時間生成快取。"""
+    """值得用MERaLiON預生成+快取的常用句清單。
+
+    2026-09-10前這份清單一直是空的demo檔案，代表雖然「常用句用高品質引擎
+    快取」這個路由機制存在，實際上從來沒有任何句子真的觸發過MERaLiON，
+    正式輸出永遠都是neurlang——等於這個機制寫好了卻完全沒生效。
+
+    這次補上4句：規則式快速路徑(`voice_io_bridge.py`/yuava22
+    `intent_rules.py`)3種固定意圖(喝水/如廁/求助)的中文回覆，實際跑過
+    `TaigiLlamaTranslationBackend`(temperature=0，兩次呼叫結果一致確認
+    過)得到的台語翻譯結果，加上`response_controller.py`的固定棄權回覆
+    (`FALLBACK_SENTENCE_HAN`)。
+
+    **實測後發現的重要修正**：`FALLBACK_SENTENCE_HAN`那句實際上**完全
+    不會走這個router**——`response_controller._fail_safe()`直接指到
+    `fallback_audio/notify_nurse.wav`這個預先生成好的靜態檔案(見
+    `response_controller.py`的`FALLBACK_AUDIO_PATH`)，`is_approved_
+    common_sentence()`根本不會被呼叫到。放進這份清單目前**沒有實際效果
+    **，純粹是為了將來如果`_fail_safe()`改走router時已經預先準備好；
+    真正有效的是另外3句(喝水/如廁/求助)，已經實測確認會真的觸發MERaLiON
+    (見`assistant_service/tests/test_tts_router.py`跟2026-09-10手動
+    curl測試：`/api/interact`問「我要喝水」後，MERaLiON backend的log
+    真的收到一次`POST /synthesize`——這是這個路由機制寫出來以後第一次
+    真的被觸發)。
+
+    **誠實揭露，不是「已審核」**：這4句台語文字本身的用字/發音**都還沒有
+    經過台語母語者審核**，跟`response_controller.py`裡棄權句自己承認的
+    限制一樣——只是「值得預先花時間生成快取的高頻固定句」，不代表內容
+    已經確認正確。另外「如廁」那句的翻譯結果是「鬥相共」(互相幫忙)，
+    語意上比較接近「求助」而不是「協助如廁」，是翻譯模型本身品質問題
+    (跟`reports/safety_critical_translation_failures.md`記錄的翻譯失真
+    是同一類問題)，這裡先如實記錄下來，沒有為了湊清單而调整或美化，
+    之後要修這個字典層級的翻譯品質問題不是這裡的範圍。"""
     if not APPROVED_SENTENCES_PATH.exists():
         return set()
     with open(APPROVED_SENTENCES_PATH, encoding="utf-8") as f:

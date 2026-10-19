@@ -10,7 +10,13 @@
 
 這裡只借用前兩步(ASR+規則式意圖判斷)當作「大腦」的第一個真實(非手動
 填寫)輸入來源，取代gTTS中英文語音，改用我們自己驗證過的
-tw_hokkien_tts_pipeline產生台語語音。reply_en完全不使用。
+tw_hokkien_tts_pipeline產生台語語音。**reply_en會原樣放進
+BrainResponse.response_en**，給multilingual_output.py產生英文補充語音用
+(2026-08-04修正：原本這裡完全不用reply_en，導致規則式快速路徑觸發的
+案例永遠沒有英文補充語音，跟LLM路徑的行為不一致——使用者實測後要求
+「不要再有沒有語音的問題」)。這幾句英文固定回覆是對方repo原本就寫好的
+(intent_rules.py)，不是這裡新翻譯的，跟response_zh一樣算是「這條規則式
+路徑本身提供的內容」，不需要另外呼叫LLM生成。
 
 刻意設計成duck typing、不在module層級import voice_io_event_detector：
 這個套件的核心意圖判斷邏輯(intent_rules.py)本身是零相依的純Python，但
@@ -63,8 +69,10 @@ _EVENT_TO_INTENT_PRIORITY: dict[str | None, tuple[str, int]] = {
 
 
 def event_decision_to_brain_response(decision: EventDecisionLike, request_id: str | None = None) -> BrainResponse:
-    """把decide_event_and_reply()的輸出轉成BrainResponse。只用
-    decision.reply_zh，reply_en不使用(我們固定輸出台語，不是中英雙語)。"""
+    """把decide_event_and_reply()的輸出轉成BrainResponse。response_zh是
+    主要輸出(拿去翻譯成台語)，response_en直接沿用decision.reply_en(對方
+    repo原本就寫好的固定英文回覆)，給中英文補充語音的英文那部分用，不需要
+    另外呼叫LLM生成。"""
     intent, priority = _EVENT_TO_INTENT_PRIORITY.get(
         decision.event, ("unclassified_request", PRIORITY_COMPANION_CHAT),
     )
@@ -74,6 +82,7 @@ def event_decision_to_brain_response(decision: EventDecisionLike, request_id: st
         risk_level="low",
         language="zh-TW",
         response_zh=decision.reply_zh,
+        response_en=decision.reply_en,
         slots={},
         action="speak",
         evidence_ids=[],
