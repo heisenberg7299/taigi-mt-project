@@ -77,6 +77,35 @@ python3 live_test/app.py   # 另開一個終端機，port 5002
 
 瀏覽器開 http://127.0.0.1:5002。
 
+## 5b. MERaLiON（第二個台語TTS引擎，音質較好但慢35倍，選用）
+
+MERaLiON-OmniVoice-Hokkien-TTS要的`transformers>=5.3.0`，跟neurlang/coqui-tts
+要的`transformers<5`互斥，**必須另外開一個獨立venv**，不能裝進第1節那個：
+
+```bash
+python3 -m venv venv_meralion
+source venv_meralion/bin/activate
+pip install torch torchaudio torchcodec omnivoice soundfile flask
+```
+
+模型權重（`MERaLiON/MERaLiON-OmniVoice-Hokkien-TTS`）第一次執行時會自動從
+HuggingFace下載，不需要手動curl。啟動：
+
+```bash
+source venv_meralion/bin/activate
+TTS_BACKEND=meralion python3 live_test/tts_backend.py   # 內部port 5011
+```
+
+這個backend會用voice cloning讓音色接近neurlang（參考音檔
+`tests/voice_refs/neurlang_ref_16k.wav`，已經在repo裡、不用另外下載）。
+跟neurlang同時跑起來後，`live_test/app.py`（上面第5節那個網站）就能在
+介面上切換兩種引擎比較。
+
+**什麼時候該用MERaLiON**：CPU上RTF=3.63（比即時慢35倍），不適合即時互動，
+只適合預先生成、之後重複播放的固定句——`assistant_service/tts_router.py`
+就是照這個原則設計路由（只有在`assistant_service/cache/approved_sentences.json`
+清單裡的固定句才會觸發MERaLiON，其餘一律用neurlang即時合成）。
+
 ## 6. 發音消歧機制（這學期的核心研究成果）
 
 台語漢字一字多音的問題，已經接進 `live_test/tts_backend.py` 的合成路徑：
