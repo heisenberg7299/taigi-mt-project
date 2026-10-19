@@ -77,6 +77,11 @@ python3 live_test/app.py   # 另開一個終端機，port 5002
 
 瀏覽器開 http://127.0.0.1:5002。
 
+**注意**：頁面上有neurlang/MERaLiON兩個選項，**預設是neurlang**——如果
+沒先裝好第5b節的MERaLiON、就直接選MERaLiON送出，會因為5011連不到而
+失敗；要測MERaLiON記得先照5b把它跑起來，並且每次測試前確認自己真的
+有點選到想要的那個選項，不要預設它會記住上次的選擇。
+
 ## 5b. MERaLiON（第二個台語TTS引擎，音質較好但慢35倍，選用）
 
 MERaLiON-OmniVoice-Hokkien-TTS要的`transformers>=5.3.0`，跟neurlang/coqui-tts
@@ -104,7 +109,16 @@ TTS_BACKEND=meralion python3 live_test/tts_backend.py   # 內部port 5011
 **什麼時候該用MERaLiON**：CPU上RTF=3.63（比即時慢35倍），不適合即時互動，
 只適合預先生成、之後重複播放的固定句——`assistant_service/tts_router.py`
 就是照這個原則設計路由（只有在`assistant_service/cache/approved_sentences.json`
-清單裡的固定句才會觸發MERaLiON，其餘一律用neurlang即時合成）。
+清單裡的固定句才會觸發MERaLiON，其餘一律用neurlang即時合成；也可以用
+`ASSISTANT_SERVICE_FORCE_MERALION=1`環境變數強制全部用MERaLiON，代價是
+每句話都要等好幾秒到十幾秒）。
+
+**這個比較工具(`live_test/app.py`)本身沒有快取**，每次送出都會重新呼叫
+選定的backend即時生成，不會有「聽到舊聲音」的問題；`assistant_service/
+tts_router.py`則會把生成結果存成快取檔案重複使用，快取key有分neurlang/
+MERaLiON各自獨立（2026-10-19修過一個真實bug：曾經兩個backend共用同一個
+快取檔案，導致切換引擎後還是聽到舊引擎的聲音），如果在assistant_service
+那邊測試覺得「聲音怎麼跟預期的引擎不一樣」，先確認不是命中了舊快取。
 
 ## 6. 發音消歧機制（這學期的核心研究成果）
 
